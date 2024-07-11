@@ -3,7 +3,7 @@
 
 This repository contains [CAD model](./CAD-model/) along with some software code for a robotic gantry system stepper motor controllers and gripper.
 
-![image](./CAD-model/3d.png)
+![image](./CAD-model/3d-v2.png)
 
 ## Contributors
 - Zain Shakeel
