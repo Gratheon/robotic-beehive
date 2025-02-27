@@ -11,11 +11,13 @@
 from time import sleep
 import RPi.GPIO as GPIO
 #
-PUL = 17  # Stepper Drive Pulses
-DIR = 27  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
+PUL = 5  # Stepper Drive Pulses
+DIR = 26  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
+
 ENA = 22  # Controller Enable Bit (High to Enable / LOW to Disable).
 DIRI = 14  # Status Indicator LED - Direction
 ENAI = 15  # Status indicator LED - Controller Enable
+
 #
 # NOTE: Leave DIR and ENA disconnected, and the controller WILL drive the motor in Default direction if PUL is applied.
 # 
