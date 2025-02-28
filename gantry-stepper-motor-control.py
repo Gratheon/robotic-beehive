@@ -13,8 +13,8 @@ from time import sleep
 import Jetson.GPIO as GPIO
 
 #
-PUL = 35  # Stepper Drive Pulses
-DIR = 26  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
+PUL = 33  # Stepper Drive Pulses
+DIR = 40  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
 ENA = 22  # Controller Enable Bit (High to Enable / LOW to Disable).
 
 DIRI = 19  # Status Indicator LED - Direction
@@ -47,7 +47,7 @@ durationBwd = 15000 # This is the duration of the motor spinning. used for rever
 print('Duration Fwd set to ' + str(durationFwd))
 print('Duration Bwd set to ' + str(durationBwd))
 #
-delay = 0.0001 # This is actualy a delay between PUL pulses - effectively sets the mtor rotation speed.
+delay = 0.0005 # This is actualy a delay between PUL pulses - effectively sets the mtor rotation speed.
 print('Speed set to ' + str(delay))
 #
 cycles = 10000 # This is the number of cycles to be run once program is started.
@@ -69,7 +69,7 @@ def forward():
         GPIO.output(PUL, GPIO.HIGH)
         sleep(delay)
         GPIO.output(PUL, GPIO.LOW)
-        sleep(delay/2)
+        sleep(delay)
     GPIO.output(ENA, GPIO.LOW)
     GPIO.output(ENAI, GPIO.LOW)
     print('ENA set to LOW - Controller Disabled')
@@ -92,7 +92,7 @@ def reverse():
         GPIO.output(PUL, GPIO.HIGH)
         sleep(delay)
         GPIO.output(PUL, GPIO.LOW)
-        sleep(delay/2)
+        sleep(delay)
     GPIO.output(ENA, GPIO.LOW)
     GPIO.output(ENAI, GPIO.LOW)
     print('ENA set to LOW - Controller Disabled')
