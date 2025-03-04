@@ -16,9 +16,9 @@ GPIO.setup(ENA, GPIO.OUT)
 print('Initialization Completed')
 
 # Motor control parameters
-base_delay = 0.0005  # Base delay between PUL pulses
+pulse = 0.0005  # Base delay between PUL pulses
 up_speed_factor = 1.5  # Increase this factor to give more torque when moving up
-print('Base speed set to ' + str(base_delay))
+print('Base speed set to ' + str(pulse))
 
 # Control flags
 running = True
@@ -39,20 +39,18 @@ def pulse_motor():
             # Enable motor
             GPIO.output(ENA, GPIO.HIGH)
             
-            # Adjust delay based on direction
-            current_delay = base_delay * (1 / up_speed_factor) if direction_up else base_delay
-
             # Pulse the motor as long as motor_running is True
             while motor_running and running:
                 GPIO.output(PUL, GPIO.HIGH)
-                sleep(current_delay)
+                sleep(pulse)
+                
                 GPIO.output(PUL, GPIO.LOW)
-                sleep(current_delay)
+                sleep(pulse)
 
             # Disable motor when stopped
             GPIO.output(ENA, GPIO.LOW)
-
-        sleep(0.01)  # Small delay to prevent CPU hogging
+        else:
+            sleep(0.01)  # Small delay to prevent CPU hogging
 
 
 def stop_program():
