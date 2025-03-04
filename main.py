@@ -21,7 +21,7 @@ GPIO.setup(ENA, GPIO.OUT)
 print('Initialization Completed')
 
 # Motor control parameters
-delay = 0.0005  # Delay between PUL pulses - effectively sets the motor rotation speed
+delay = 0.00005  # Delay between PUL pulses - effectively sets the motor rotation speed
 print('Speed set to ' + str(delay))
 
 # Control flags
@@ -56,7 +56,7 @@ def pulse_motor():
             # Disable motor when stopped
             GPIO.output(ENA, GPIO.LOW)
         
-        sleep(0.1)  # Small delay to prevent CPU hogging
+        sleep(0.01)  # Small delay to prevent CPU hogging
 
 def keyboard_listener():
     """Listen for keyboard input"""
