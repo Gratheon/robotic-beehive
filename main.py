@@ -16,8 +16,8 @@ GPIO.setup(ENA, GPIO.OUT)
 print('Initialization Completed')
 
 # Motor control parameters
-base_delay = 0.00001  # Base delay between PUL pulses
-up_speed_factor = 0.5  # Adjust this factor to make upward movement faster (lower value = faster)
+base_delay = 0.0005  # Base delay between PUL pulses
+up_speed_factor = 1.5  # Increase this factor to give more torque when moving up
 print('Base speed set to ' + str(base_delay))
 
 # Control flags
@@ -34,13 +34,13 @@ def pulse_motor():
         if motor_running:
             # Set direction
             GPIO.output(DIR, GPIO.LOW if direction_up else GPIO.HIGH)
-            print('Moving Forward' if direction_up else 'Moving Backward')
+            print('Moving Up' if direction_up else 'Moving Down')
 
             # Enable motor
             GPIO.output(ENA, GPIO.HIGH)
             
             # Adjust delay based on direction
-            current_delay = base_delay * up_speed_factor if direction_up else base_delay
+            current_delay = base_delay * (1 / up_speed_factor) if direction_up else base_delay
 
             # Pulse the motor as long as motor_running is True
             while motor_running and running:
@@ -73,8 +73,8 @@ motor_thread.start()
 
 # Handle keyboard input in the main thread
 print("Keyboard controls:")
-print("- Press UP arrow key (↑) to move forward")
-print("- Press DOWN arrow key (↓) to move backward")
+print("- Press UP arrow key (↑) to move up")
+print("- Press DOWN arrow key (↓) to move down")
 print("- Press SPACE to stop the motor")
 print("- Press ESC or Q to exit")
 
@@ -85,11 +85,11 @@ try:
         if key == readchar.key.UP:
             direction_up = True
             motor_running = True
-            print("Up key pressed - Moving forward")
+            print("Up key pressed - Moving up")
         elif key == readchar.key.DOWN:
             direction_up = False
             motor_running = True
-            print("Down key pressed - Moving backward")
+            print("Down key pressed - Moving down")
         elif key in (readchar.key.ESC, 'q', 'Q'):
             print("Exiting program")
             stop_program()
