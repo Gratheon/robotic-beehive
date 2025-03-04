@@ -6,6 +6,7 @@ import readchar
 import select
 import termios
 import tty
+import signal  # Add this import at the top with the others
 
 PUL = 33  # Stepper Drive Pulses
 DIR = 40  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
@@ -37,10 +38,10 @@ def pulse_motor():
         if motor_running:
             # Set direction
             if direction_forward:
-                GPIO.output(DIR, GPIO.LOW)
+                GPIO.output(DIR, GPIO.HIGH)  # Changed from LOW to HIGH
                 print('Moving Forward')
             else:
-                GPIO.output(DIR, GPIO.HIGH)
+                GPIO.output(DIR, GPIO.LOW)   # Changed from HIGH to LOW
                 print('Moving Backward')
             
             # Enable motor
@@ -58,6 +59,14 @@ def pulse_motor():
         
         sleep(0.01)  # Small delay to prevent CPU hogging
 
+def restore_terminal(settings):
+    """Restore terminal settings"""
+    try:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+        print("Terminal settings restored")
+    except:
+        pass
+
 def keyboard_listener():
     """Listen for keyboard input"""
     global motor_running, direction_forward, running
@@ -70,6 +79,16 @@ def keyboard_listener():
     
     # Set up non-blocking keyboard input
     old_settings = termios.tcgetattr(sys.stdin)
+    
+    # Register signal handlers to restore terminal on exit
+    def signal_handler(sig, frame):
+        restore_terminal(old_settings)
+        stop_program()
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     try:
         tty.setcbreak(sys.stdin.fileno())
         
@@ -113,9 +132,11 @@ def keyboard_listener():
                         motor_running = False
                         last_key = None
                         print("Key released - Stopping motor")
+    except Exception as e:
+        print(f"Error in keyboard listener: {e}")
     finally:
         # Restore terminal settings
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+        restore_terminal(old_settings)
 
 def stop_program():
     """Clean up and exit the program"""
@@ -143,4 +164,7 @@ except KeyboardInterrupt:
     stop_program()
 finally:
     stop_program()
+# Add this at the end of the script to ensure terminal is reset on exit
+import atexit
+atexit.register(lambda: restore_terminal(termios.tcgetattr(sys.stdin)))
 
