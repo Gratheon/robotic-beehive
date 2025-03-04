@@ -3,13 +3,16 @@ import Jetson.GPIO as GPIO
 import threading
 import sys
 import readchar
+import select
+import termios
+import tty
 
 PUL = 33  # Stepper Drive Pulses
 DIR = 40  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
 ENA = 22  # Controller Enable Bit (High to Enable / LOW to Disable).
 
-GPIO.setmode(GPIO.BCM)
-# GPIO.setmode(GPIO.BOARD) # Do NOT use GPIO.BOARD mode. Here for comparison only. 
+# GPIO.setmode(GPIO.BCM)
+GPIO.setmode(GPIO.BOARD) # Jetson Nano
 
 GPIO.setup(PUL, GPIO.OUT)
 GPIO.setup(DIR, GPIO.OUT)
@@ -62,26 +65,42 @@ def keyboard_listener():
     print("Keyboard controls:")
     print("- Press UP arrow key (↑) to move forward")
     print("- Press DOWN arrow key (↓) to move backward")
+    print("- Press SPACE to stop the motor")
     print("- Press ESC or Q to exit")
     
-    while running:
-        key = readchar.readkey()
+    # Set up non-blocking keyboard input
+    old_settings = termios.tcgetattr(sys.stdin)
+    try:
+        tty.setcbreak(sys.stdin.fileno())
         
-        if key == readchar.key.UP:
-            direction_forward = True
-            motor_running = True
-            print("Up key pressed - Moving forward")
-        elif key == readchar.key.DOWN:
-            direction_forward = False
-            motor_running = True
-            print("Down key pressed - Moving backward")
-        elif key in (readchar.key.ESC, 'q', 'Q'):
-            print("Exiting program")
-            stop_program()
-            break
-        elif key == readchar.key.SPACE:
-            motor_running = False
-            print("Space pressed - Stopping motor")
+        while running:
+            # Check if there's input available
+            if select.select([sys.stdin], [], [], 0.1)[0]:
+                key = readchar.readkey()
+                
+                if key == readchar.key.UP:
+                    direction_forward = True
+                    motor_running = True
+                    print("Up key pressed - Moving forward")
+                elif key == readchar.key.DOWN:
+                    direction_forward = False
+                    motor_running = True
+                    print("Down key pressed - Moving backward")
+                elif key in (readchar.key.ESC, 'q', 'Q'):
+                    print("Exiting program")
+                    stop_program()
+                    break
+                elif key == readchar.key.SPACE:
+                    motor_running = False
+                    print("Space pressed - Stopping motor")
+            else:
+                # No key is being pressed, stop the motor
+                if motor_running:
+                    motor_running = False
+                    print("No key pressed - Stopping motor")
+    finally:
+        # Restore terminal settings
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
 
 def stop_program():
     """Clean up and exit the program"""
