@@ -1,8 +1,8 @@
 from time import sleep
 import Jetson.GPIO as GPIO
-from pynput import keyboard
 import threading
 import sys
+import readchar
 
 PUL = 33  # Stepper Drive Pulses
 DIR = 40  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
@@ -55,36 +55,33 @@ def pulse_motor():
         
         sleep(0.1)  # Small delay to prevent CPU hogging
 
-def on_press(key):
-    """Handle key press events"""
-    global motor_running, direction_forward
+def keyboard_listener():
+    """Listen for keyboard input"""
+    global motor_running, direction_forward, running
     
-    try:
-        if key == keyboard.Key.up:
+    print("Keyboard controls:")
+    print("- Press UP arrow key (↑) to move forward")
+    print("- Press DOWN arrow key (↓) to move backward")
+    print("- Press ESC or Q to exit")
+    
+    while running:
+        key = readchar.readkey()
+        
+        if key == readchar.key.UP:
             direction_forward = True
             motor_running = True
             print("Up key pressed - Moving forward")
-        elif key == keyboard.Key.down:
+        elif key == readchar.key.DOWN:
             direction_forward = False
             motor_running = True
             print("Down key pressed - Moving backward")
-        elif key == keyboard.Key.esc:
+        elif key in (readchar.key.ESC, 'q', 'Q'):
             print("Exiting program")
             stop_program()
-            return False  # Stop listener
-    except AttributeError:
-        pass
-
-def on_release(key):
-    """Handle key release events"""
-    global motor_running
-    
-    try:
-        if key == keyboard.Key.up or key == keyboard.Key.down:
+            break
+        elif key == readchar.key.SPACE:
             motor_running = False
-            print("Key released - Stopping motor")
-    except AttributeError:
-        pass
+            print("Space pressed - Stopping motor")
 
 def stop_program():
     """Clean up and exit the program"""
@@ -100,15 +97,14 @@ motor_thread = threading.Thread(target=pulse_motor)
 motor_thread.daemon = True
 motor_thread.start()
 
-print("Keyboard controls:")
-print("- Press UP arrow key to move forward")
-print("- Press DOWN arrow key to move backward")
-print("- Press ESC to exit")
-
-# Start keyboard listener
+# Start keyboard listener thread
 try:
-    with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
-        listener.join()
+    keyboard_thread = threading.Thread(target=keyboard_listener)
+    keyboard_thread.daemon = True
+    keyboard_thread.start()
+    
+    # Keep the main thread alive until keyboard_thread exits
+    keyboard_thread.join()
 except KeyboardInterrupt:
     stop_program()
 finally:
