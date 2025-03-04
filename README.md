@@ -8,7 +8,7 @@
 #### Components
 - NVidia Jetson Nano
 - Display
-- 2 stepper motors on a rail
+- Nema 23 motors on a rail
 - DM542 stepmotor controller
 - 24V power supply
 

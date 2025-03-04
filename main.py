@@ -1,103 +1,101 @@
-from time import sleep
 import Jetson.GPIO as GPIO
+import readchar
+import threading
+from time import sleep
 
 PUL = 33  # Stepper Drive Pulses
 DIR = 40  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
 ENA = 22  # Controller Enable Bit (High to Enable / LOW to Disable).
 
-DIRI = 19  # Status Indicator LED - Direction
-ENAI = 21  # Status indicator LED - Controller Enable
+GPIO.setmode(GPIO.BOARD)  # Jetson Nano
 
-#
-# NOTE: Leave DIR and ENA disconnected, and the controller WILL drive the motor in Default direction if PUL is applied.
-# 
-GPIO.setmode(GPIO.BCM)
-# GPIO.setmode(GPIO.BOARD) # Do NOT use GPIO.BOARD mode. Here for comparison only. 
-#
 GPIO.setup(PUL, GPIO.OUT)
 GPIO.setup(DIR, GPIO.OUT)
 GPIO.setup(ENA, GPIO.OUT)
-GPIO.setup(DIRI, GPIO.OUT)
-GPIO.setup(ENAI, GPIO.OUT)
-#
-print('PUL = GPIO 17 - RPi 3B-Pin #11')
-print('DIR = GPIO 27 - RPi 3B-Pin #13')
-print('ENA = GPIO 22 - RPi 3B-Pin #15')
-# print('ENAI = GPIO 14 - RPi 3B-Pin #8')
-# print('DIRI = GPIO 15 - RPi 3B-Pin #10')
 
-#
 print('Initialization Completed')
-#
-# Could have usesd only one DURATION constant but chose two. This gives play options.
-durationFwd = 15000 # This is the duration of the motor spinning. used for forward direction
-durationBwd = 15000 # This is the duration of the motor spinning. used for reverse direction
-print('Duration Fwd set to ' + str(durationFwd))
-print('Duration Bwd set to ' + str(durationBwd))
-#
-delay = 0.0005 # This is actualy a delay between PUL pulses - effectively sets the mtor rotation speed.
-print('Speed set to ' + str(delay))
-#
-cycles = 10000 # This is the number of cycles to be run once program is started.
-cyclecount = 0 # This is the iteration of cycles to be run once program is started.
-print('number of Cycles to Run set to ' + str(cycles))
-#
-#
-def forward():
-    GPIO.output(ENA, GPIO.HIGH)
-    GPIO.output(ENAI, GPIO.HIGH)
-    print('ENA set to HIGH - Controller Enabled')
-    #
-    sleep(.5) # pause due to a possible change direction
-    GPIO.output(DIR, GPIO.LOW)
-    GPIO.output(DIRI, GPIO.LOW)
-    print('DIR set to LOW - Moving Forward at ' + str(delay))
-    print('Controller PUL being driven.')
-    for x in range(durationFwd):
-        GPIO.output(PUL, GPIO.HIGH)
-        sleep(delay)
-        GPIO.output(PUL, GPIO.LOW)
-        sleep(delay)
-    GPIO.output(ENA, GPIO.LOW)
-    GPIO.output(ENAI, GPIO.LOW)
-    print('ENA set to LOW - Controller Disabled')
-    sleep(.5) # pause for possible change direction
-    return
-#
-#
-def reverse():
-    GPIO.output(ENA, GPIO.HIGH)
-    GPIO.output(ENAI, GPIO.HIGH)
-    print('ENA set to HIGH - Controller Enabled')
-    #
-    sleep(.5) # pause due to a possible change direction
-    GPIO.output(DIR, GPIO.HIGH)
-    GPIO.output(DIRI, GPIO.HIGH)
-    print('DIR set to HIGH - Moving Backward at ' + str(delay))
-    print('Controller PUL being driven.')
-    #
-    for y in range(durationBwd):
-        GPIO.output(PUL, GPIO.HIGH)
-        sleep(delay)
-        GPIO.output(PUL, GPIO.LOW)
-        sleep(delay)
-    GPIO.output(ENA, GPIO.LOW)
-    GPIO.output(ENAI, GPIO.LOW)
-    print('ENA set to LOW - Controller Disabled')
-    sleep(.5) # pause for possible change direction
-    return
+
+# Motor control parameters
+pulse = 0.0005  # Base delay between PUL pulses
+up_speed_factor = 1.5  # Increase this factor to give more torque when moving up
+print('Base speed set to ' + str(pulse))
+
+# Control flags
+running = True
+motor_running = False
+direction_up = True
+
+
+def pulse_motor():
+    """Function to continuously pulse the motor while motor_running is True"""
+    global motor_running, direction_up
+
+    while running:
+        if motor_running:
+            # Set direction
+            GPIO.output(DIR, GPIO.LOW if direction_up else GPIO.HIGH)
+            print('Moving Up' if direction_up else 'Moving Down')
+
+            # Enable motor
+            GPIO.output(ENA, GPIO.HIGH)
+            
+            # Pulse the motor as long as motor_running is True
+            while motor_running and running:
+                GPIO.output(PUL, GPIO.HIGH)
+                sleep(pulse)
+                
+                GPIO.output(PUL, GPIO.LOW)
+                sleep(pulse)
+
+            # Disable motor when stopped
+            GPIO.output(ENA, GPIO.LOW)
+        else:
+            sleep(0.01)  # Small delay to prevent CPU hogging
+
+
+def stop_program():
+    """Clean up and exit the program"""
+    global running
+    running = False
+    global motor_running
+    motor_running = False
+    print("Cleaning up GPIO")
+    GPIO.cleanup()
+    print("Exiting program")
+
+
+# Start the motor control thread
+motor_thread = threading.Thread(target=pulse_motor)
+motor_thread.daemon = True
+motor_thread.start()
+
+# Handle keyboard input in the main thread
+print("Keyboard controls:")
+print("- Press UP arrow key (↑) to move up")
+print("- Press DOWN arrow key (↓) to move down")
+print("- Press SPACE to stop the motor")
+print("- Press ESC or Q to exit")
 
 try:
-    while cyclecount < cycles:
-        forward()
-        reverse()
-        cyclecount = (cyclecount + 1)
-        print('Number of cycles completed: ' + str(cyclecount))
-        print('Number of cycles remaining: ' + str(cycles - cyclecount))
-    GPIO.cleanup()
+    while running:
+        key = readchar.readkey()
 
-
-except KeyboardInterrupt:
-    GPIO.cleanup()
-
-print('Cycling Completed')
+        if key == readchar.key.UP:
+            direction_up = True
+            motor_running = True
+            print("Up key pressed - Moving up")
+        elif key == readchar.key.DOWN:
+            direction_up = False
+            motor_running = True
+            print("Down key pressed - Moving down")
+        elif key in (readchar.key.ESC, 'q', 'Q'):
+            print("Exiting program")
+            stop_program()
+            break
+        elif key == readchar.key.SPACE:
+            motor_running = False
+            print("Space pressed - Stopping motor")
+except Exception as e:
+    print(f"Error in keyboard handling: {e}")
+finally:
+    stop_program()
