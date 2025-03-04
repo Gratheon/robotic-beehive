@@ -16,8 +16,9 @@ GPIO.setup(ENA, GPIO.OUT)
 print('Initialization Completed')
 
 # Motor control parameters
-delay = 0.00001  # Delay between PUL pulses - effectively sets the motor rotation speed
-print('Speed set to ' + str(delay))
+base_delay = 0.00001  # Base delay between PUL pulses
+up_speed_factor = 0.5  # Adjust this factor to make upward movement faster (lower value = faster)
+print('Base speed set to ' + str(base_delay))
 
 # Control flags
 running = True
@@ -37,19 +38,16 @@ def pulse_motor():
 
             # Enable motor
             GPIO.output(ENA, GPIO.HIGH)
+            
+            # Adjust delay based on direction
+            current_delay = base_delay * up_speed_factor if direction_up else base_delay
 
             # Pulse the motor as long as motor_running is True
             while motor_running and running:
-                if direction_up:
-                    GPIO.output(PUL, GPIO.LOW)
-                    sleep(delay)
-                    GPIO.output(PUL, GPIO.HIGH)
-                    sleep(delay)
-                else:
-                    GPIO.output(PUL, GPIO.HIGH)
-                    sleep(delay)
-                    GPIO.output(PUL, GPIO.LOW)
-                    sleep(delay)
+                GPIO.output(PUL, GPIO.HIGH)
+                sleep(current_delay)
+                GPIO.output(PUL, GPIO.LOW)
+                sleep(current_delay)
 
             # Disable motor when stopped
             GPIO.output(ENA, GPIO.LOW)
