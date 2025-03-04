@@ -73,18 +73,23 @@ def keyboard_listener():
     try:
         tty.setcbreak(sys.stdin.fileno())
         
+        # Track the last key pressed
+        last_key = None
+        
         while running:
             # Check if there's input available
-            if select.select([sys.stdin], [], [], 0.1)[0]:
+            if select.select([sys.stdin], [], [], 0.05)[0]:
                 key = readchar.readkey()
                 
                 if key == readchar.key.UP:
                     direction_forward = True
                     motor_running = True
+                    last_key = key
                     print("Up key pressed - Moving forward")
                 elif key == readchar.key.DOWN:
                     direction_forward = False
                     motor_running = True
+                    last_key = key
                     print("Down key pressed - Moving backward")
                 elif key in (readchar.key.ESC, 'q', 'Q'):
                     print("Exiting program")
@@ -92,12 +97,22 @@ def keyboard_listener():
                     break
                 elif key == readchar.key.SPACE:
                     motor_running = False
+                    last_key = None
                     print("Space pressed - Stopping motor")
+                else:
+                    # Any other key press stops the motor
+                    if motor_running:
+                        motor_running = False
+                        last_key = None
+                        print("Key released - Stopping motor")
             else:
-                # No key is being pressed, stop the motor
-                if motor_running:
-                    motor_running = False
-                    print("No key pressed - Stopping motor")
+                # No key is being pressed, check if we need to stop the motor
+                if motor_running and last_key is not None:
+                    # Check if the key that started the motor is still pressed
+                    if not select.select([sys.stdin], [], [], 0)[0]:
+                        motor_running = False
+                        last_key = None
+                        print("Key released - Stopping motor")
     finally:
         # Restore terminal settings
         termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
