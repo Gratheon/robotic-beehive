@@ -5,41 +5,58 @@ import sys
 import readchar
 import select
 
+# GPIO pin definitions
 PUL = 33  # Stepper Drive Pulses
-DIR = 40  # Controller Direction Bit (High for Controller default / LOW to Force a Direction Change).
-ENA = 22  # Controller Enable Bit (High to Enable / LOW to Disable).
-
-# GPIO.setmode(GPIO.BCM)
-GPIO.setmode(GPIO.BOARD) # Jetson Nano
-
-GPIO.setup(PUL, GPIO.OUT)
-GPIO.setup(DIR, GPIO.OUT)
-GPIO.setup(ENA, GPIO.OUT)
-
-print('Initialization Completed')
-
-# Motor control parameters
-delay = 0.00005  # Delay between PUL pulses - effectively sets the motor rotation speed
-print('Speed set to ' + str(delay))
+DIR = 40  # Controller Direction Bit
+ENA = 22  # Controller Enable Bit
 
 # Control flags
 running = True
 motor_running = False
 direction_forward = True
 
+def setup_gpio():
+    """Initialize GPIO pins"""
+    GPIO.setmode(GPIO.BOARD)  # Jetson Nano
+    GPIO.setup(PUL, GPIO.OUT)
+    GPIO.setup(DIR, GPIO.OUT)
+    GPIO.setup(ENA, GPIO.OUT)
+    print('Initialization Completed')
+
+def set_motor_direction(forward=True):
+    """Set the motor direction"""
+    global direction_forward
+    direction_forward = forward
+    if forward:
+        GPIO.output(DIR, GPIO.HIGH)
+        print('Moving Forward')
+    else:
+        GPIO.output(DIR, GPIO.LOW)
+        print('Moving Backward')
+
+def start_motor():
+    """Start the motor"""
+    global motor_running
+    motor_running = True
+    GPIO.output(ENA, GPIO.HIGH)
+
+def stop_motor():
+    """Stop the motor"""
+    global motor_running
+    motor_running = False
+    GPIO.output(ENA, GPIO.LOW)
+    print("Motor stopped")
+
 def pulse_motor():
     """Function to continuously pulse the motor while motor_running is True"""
     global motor_running, direction_forward
+    delay = 0.00005  # Delay between PUL pulses - effectively sets the motor rotation speed
+    print('Speed set to ' + str(delay))
     
     while running:
         if motor_running:
-            # Set direction
-            if direction_forward:
-                GPIO.output(DIR, GPIO.HIGH)  # Changed from LOW to HIGH
-                print('Moving Forward')
-            else:
-                GPIO.output(DIR, GPIO.LOW)   # Changed from HIGH to LOW
-                print('Moving Backward')
+            # Set direction based on current setting
+            set_motor_direction(direction_forward)
             
             # Enable motor
             GPIO.output(ENA, GPIO.HIGH)
@@ -57,7 +74,6 @@ def pulse_motor():
                     GPIO.output(PUL, GPIO.LOW)
                     sleep(delay)
 
-
             # Disable motor when stopped
             GPIO.output(ENA, GPIO.LOW)
         
@@ -67,68 +83,62 @@ def stop_program():
     """Clean up and exit the program"""
     global running
     running = False
-    global motor_running
-    motor_running = False
+    stop_motor()
     print("Cleaning up GPIO")
     GPIO.cleanup()
     print("Exiting program")
 
-# Start the motor control thread
-motor_thread = threading.Thread(target=pulse_motor)
-motor_thread.daemon = True
-motor_thread.start()
+def print_instructions():
+    """Print keyboard control instructions"""
+    print("Keyboard controls:")
+    print("- Press UP arrow key (↑) to move forward")
+    print("- Press DOWN arrow key (↓) to move backward")
+    print("- Press SPACE to stop the motor")
+    print("- Press ESC or Q to exit")
 
-# Handle keyboard input in the main thread
-print("Keyboard controls:")
-print("- Press UP arrow key (↑) to move forward")
-print("- Press DOWN arrow key (↓) to move backward")
-print("- Press SPACE to stop the motor")
-print("- Press ESC or Q to exit")
-
-
-try:    
-    # Track the last key pressed
-    last_key = None
+def handle_keyboard_input():
+    """Handle keyboard input in the main thread"""
+    global running, motor_running, direction_forward
     
-    while running:
-        # Check if there's input available
-        if select.select([sys.stdin], [], [], 0.05)[0]:
-            key = readchar.readkey()
+    try:
+        while running:
+            # Check if there's input available
+            if select.select([sys.stdin], [], [], 0.05)[0]:
+                key = readchar.readkey()
+                
+                if key == readchar.key.UP:
+                    direction_forward = True
+                    start_motor()
+                    print("Up key pressed - Moving forward")
+                elif key == readchar.key.DOWN:
+                    direction_forward = False
+                    start_motor()
+                    print("Down key pressed - Moving backward")
+                elif key in (readchar.key.ESC, 'q', 'Q'):
+                    print("Exiting program")
+                    stop_program()
+                    break
+                elif key == readchar.key.SPACE:
+                    stop_motor()
+                    print("Space pressed - Stopping motor")
             
-            if key == readchar.key.UP:
-                direction_forward = True
-                motor_running = True
-                last_key = key
-                print("Up key pressed - Moving forward")
-            elif key == readchar.key.DOWN:
-                direction_forward = False
-                motor_running = True
-                last_key = key
-                print("Down key pressed - Moving backward")
-            elif key in (readchar.key.ESC, 'q', 'Q'):
-                print("Exiting program")
-                stop_program()
-                break
-            elif key == readchar.key.SPACE:
-                motor_running = False
-                last_key = None
-                print("Space pressed - Stopping motor")
-            else:
-                # Any other key press stops the motor
-                if motor_running:
-                    motor_running = False
-                    last_key = None
-                    print("Key released - Stopping motor")
-        else:
-            # No key is being pressed, check if we need to stop the motor
-            if motor_running and last_key is not None:
-                # Check if the key that started the motor is still pressed
-                if not select.select([sys.stdin], [], [], 0)[0]:
-                    motor_running = False
-                    last_key = None
-                    print("Key released - Stopping motor")
-except Exception as e:
-    print(f"Error in keyboard handling: {e}")
-finally:
-    # Restore terminal settings
-    stop_program()
+            sleep(0.01)  # Small delay to prevent CPU hogging
+    except Exception as e:
+        print(f"Error in keyboard handling: {e}")
+    finally:
+        stop_program()
+
+def main():
+    """Main function to run the program"""
+    setup_gpio()
+    
+    # Start the motor control thread
+    motor_thread = threading.Thread(target=pulse_motor)
+    motor_thread.daemon = True
+    motor_thread.start()
+    
+    print_instructions()
+    handle_keyboard_input()
+
+if __name__ == "__main__":
+    main()
