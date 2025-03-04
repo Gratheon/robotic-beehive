@@ -16,39 +16,39 @@ GPIO.setup(ENA, GPIO.OUT)
 print('Initialization Completed')
 
 # Motor control parameters
-delay = 0.00005  # Delay between PUL pulses - effectively sets the motor rotation speed
+delay = 0.00001  # Delay between PUL pulses - effectively sets the motor rotation speed
 print('Speed set to ' + str(delay))
 
 # Control flags
 running = True
 motor_running = False
-direction_forward = True
+direction_up = True
 
 
 def pulse_motor():
     """Function to continuously pulse the motor while motor_running is True"""
-    global motor_running, direction_forward
+    global motor_running, direction_up
 
     while running:
         if motor_running:
             # Set direction
-            GPIO.output(DIR, GPIO.LOW if direction_forward else GPIO.HIGH)
-            print('Moving Forward' if direction_forward else 'Moving Backward')
+            GPIO.output(DIR, GPIO.LOW if direction_up else GPIO.HIGH)
+            print('Moving Forward' if direction_up else 'Moving Backward')
 
             # Enable motor
             GPIO.output(ENA, GPIO.HIGH)
 
             # Pulse the motor as long as motor_running is True
             while motor_running and running:
-                if direction_forward:
-                    GPIO.output(PUL, GPIO.HIGH)
-                    sleep(delay)
+                if direction_up:
                     GPIO.output(PUL, GPIO.LOW)
+                    sleep(delay)
+                    GPIO.output(PUL, GPIO.HIGH)
                     sleep(delay)
                 else:
-                    GPIO.output(PUL, GPIO.LOW)
-                    sleep(delay)
                     GPIO.output(PUL, GPIO.HIGH)
+                    sleep(delay)
+                    GPIO.output(PUL, GPIO.LOW)
                     sleep(delay)
 
             # Disable motor when stopped
@@ -85,11 +85,11 @@ try:
         key = readchar.readkey()
 
         if key == readchar.key.UP:
-            direction_forward = True
+            direction_up = True
             motor_running = True
             print("Up key pressed - Moving forward")
         elif key == readchar.key.DOWN:
-            direction_forward = False
+            direction_up = False
             motor_running = True
             print("Down key pressed - Moving backward")
         elif key in (readchar.key.ESC, 'q', 'Q'):
