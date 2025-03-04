@@ -46,11 +46,18 @@ def pulse_motor():
             
             # Pulse the motor as long as motor_running is True
             while motor_running and running:
-                GPIO.output(PUL, GPIO.HIGH)
-                sleep(delay)
-                GPIO.output(PUL, GPIO.LOW)
-                sleep(delay)
-            
+                if direction_forward:
+                    GPIO.output(PUL, GPIO.LOW)
+                    sleep(delay)
+                    GPIO.output(PUL, GPIO.HIGH)
+                    sleep(delay)
+                else:
+                    GPIO.output(PUL, GPIO.HIGH)
+                    sleep(delay)
+                    GPIO.output(PUL, GPIO.LOW)
+                    sleep(delay)
+
+
             # Disable motor when stopped
             GPIO.output(ENA, GPIO.LOW)
         
