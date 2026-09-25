@@ -1,4 +1,4 @@
-/* Hive Tower viewer. Everything is scoped to .hive-tower so it can be embedded
+/* Robotic Beehive viewer. Everything is scoped to .hive-tower so it can be embedded
    in other pages (gratheon.com). Theme follows html[data-theme] or the OS. */
 .hive-tower {
   --ht-bg: #eef0ec;

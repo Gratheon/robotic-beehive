@@ -1,4 +1,4 @@
-"""Generates docs/wiring.svg (block-level wiring of the Hive Tower).
+"""Generates docs/wiring.svg (block-level wiring of the Robotic Beehive).
 
     python3 docs/wiring_diagram.py
 """
@@ -113,7 +113,7 @@ svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{
 .w {{ font-size: 11px; font-weight: 700; }}
 </style></defs>
 <rect width="{W}" height="{H}" fill="#fafaf7"/>
-<text x="20" y="22" style="font-size:16px;font-weight:700;fill:#111827">Hive Tower — electrical block diagram</text>
+<text x="20" y="22" style="font-size:16px;font-weight:700;fill:#111827">Robotic Beehive — electrical block diagram</text>
 {chr(10).join(out)}
 </svg>
 """

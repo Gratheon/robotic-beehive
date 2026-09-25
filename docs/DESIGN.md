@@ -1,4 +1,4 @@
-# Hive Tower: robotic beehive design (concept v3)
+# Robotic Beehive: design (concept v3)
 
 A static, weatherproof cabinet around a standard vertical hive. The robot inspects one box at a time:
 

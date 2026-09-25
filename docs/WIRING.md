@@ -1,4 +1,4 @@
-# Hive Tower wiring
+# Robotic Beehive wiring
 
 ![Electrical block diagram](wiring.svg)
 

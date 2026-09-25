@@ -1,13 +1,13 @@
 ### gratheon/robotic-beehive
 [Gratheon Robotic beehive](https://gratheon.com/products/robotic_beehive/) is a project to build a robotic beehive that inspects the colony without harming it.
 
-#### Hive Tower (concept v3)
+#### Robotic Beehive (concept v3)
 A weatherproof cabinet around a standard vertical hive. To inspect a box, the robot:
 1. peels the stack above it apart one edge at a time and lifts it 400 mm;
 2. lifts each frame straight up, photographs both faces straight on at a fixed photo spot, then sets it down in the free gap beside it, like a beekeeper working through a box;
 3. closes the hive with a rolling landing so bees are pushed aside, not crushed.
 
-[![Hive Tower 3D model: a frame lifted to the photo spot between the cameras](docs/preview.png)](https://gratheon.com/products/robotic_beehive/)
+[![Robotic Beehive 3D model: a frame lifted to the photo spot between the cameras](docs/preview.png)](https://gratheon.com/products/robotic_beehive/)
 
 **Live 3D preview:** [gratheon.com/products/robotic_beehive](https://gratheon.com/products/robotic_beehive/), or open `model/index.html` from this repo.
 

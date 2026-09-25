@@ -1,4 +1,4 @@
-// Interactive Hive Tower viewer. mountHiveTower(root) wires up one
+// Interactive Robotic Beehive viewer. mountHiveTower(root) wires up one
 // viewer.html block; the root's data-* elements are looked up inside it, so
 // the viewer can be embedded in any page (see build-viewer.mjs).
 import * as THREE from 'three';

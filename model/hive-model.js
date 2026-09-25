@@ -1,4 +1,4 @@
-// Gratheon "Hive Tower" — parametric model of a static robotic beehive.
+// Gratheon Robotic Beehive — parametric model of a static robotic beehive.
 // Single source of truth for both the browser viewer (index.html) and the
 // GLB exporter (export-glb.mjs). All dimensions are in millimetres; the scene
 // is built in metres (glTF convention).

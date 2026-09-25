@@ -1,4 +1,4 @@
-// Builds the Hive Tower scene in Node and writes hive-tower.glb with the
+// Builds the Robotic Beehive scene in Node and writes hive-tower.glb with the
 // inspection sequence baked in as an animation clip ("inspection").
 //   node export-glb.mjs [--boxes 3] [--inspect 1] [--out hive-tower.glb]
 import { writeFileSync } from 'node:fs';
