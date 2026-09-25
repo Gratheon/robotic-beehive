@@ -20,11 +20,19 @@ const SPECS = (d, p) => [
 export function mountHiveTower(root) {
   const $ = (name) => root.querySelector(`[data-ht="${name}"]`);
   const canvas = $('canvas');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  // URL hash options (used by render-preview.mjs for product images):
+  //   #shot  hide the panel and overlays · theme=light|dark · clad=solid|ghost|off
+  //   t=19.5 freeze the inspection at that time (s) · cam=hero portrait framing
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  const shot = hash.has('shot');
+  if (shot) root.classList.add('ht-shot');
+  if (['light', 'dark'].includes(hash.get('theme'))) document.documentElement.dataset.theme = hash.get('theme');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: shot });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
 
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -40,28 +48,50 @@ export function mountHiveTower(root) {
   controls.minDistance = 0.6;
   controls.maxDistance = 8;
 
-  const sun = new THREE.DirectionalLight(0xfff4e0, 2.2);
+  const sun = new THREE.DirectionalLight(0xfff6e5, 3.0);
   sun.position.set(2.5, 4.5, 3);
   sun.castShadow = true;
   sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -1.6, right: 1.6, top: 2.4, bottom: -0.4, near: 0.5, far: 12 });
   sun.shadow.bias = -0.0004;
-  scene.add(sun, new THREE.HemisphereLight(0xdfe8ff, 0x3b4a2c, 0.5));
+  // Sunny day: blue sky above, green light bounced up from the grass.
+  scene.add(sun, new THREE.HemisphereLight(0xcfe6ff, 0x5d8f3a, 0.8));
   const redLight = new THREE.PointLight(0xff2a10, 0, 2.2, 1.5);
   scene.add(redLight);
 
-  const groundMat = new THREE.MeshStandardMaterial({ color: 0xb9c2b0, roughness: 1 });
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(6, 64), groundMat);
+  const groundMat = new THREE.MeshStandardMaterial({ color: 0x5da83a, roughness: 1 });
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(30, 96), groundMat);
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   const pad = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.02, 1.2), new THREE.MeshStandardMaterial({ color: 0x9d9a92, roughness: 1 }));
   pad.receiveShadow = true;
   scene.add(ground, pad);
 
+  // Outdoor backdrop: a sky dome that fades to haze at the horizon, and grass
+  // that fogs into the same haze, so ground and sky meet without a seam.
+  const skyMat = new THREE.ShaderMaterial({
+    uniforms: { top: { value: new THREE.Color(0x1f7fe0) }, horizon: { value: new THREE.Color(0xcfe8f8) } },
+    vertexShader: 'varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 top; uniform vec3 horizon; varying vec3 vDir; void main() { float h = clamp(vDir.y, 0.0, 1.0); gl_FragColor = vec4(mix(horizon, top, smoothstep(0.0, 0.22, h)), 1.0);\n#include <colorspace_fragment>\n}',
+    side: THREE.BackSide,
+    depthWrite: false,
+    fog: false,
+  });
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(45, 32, 16), skyMat);
+  sky.renderOrder = -1;
+  scene.add(sky);
+  // Fallback behind the dome: the same haze as the horizon, never black.
+  scene.background = new THREE.Color(0xcfe8f8);
+  scene.fog = new THREE.Fog(0xcfe8f8, 10, 34);
   const applyThemeColors = () => {
     const cs = getComputedStyle(root);
-    scene.background = new THREE.Color(cs.getPropertyValue('--ht-scene').trim() || '#dfe3dc');
-    groundMat.color.set(cs.getPropertyValue('--ht-ground').trim() || '#b9c2b0');
+    const v = (name, fallback) => cs.getPropertyValue(name).trim() || fallback;
+    const horizon = v('--ht-scene', '#cfe8f8');
+    skyMat.uniforms.top.value.set(v('--ht-sky', '#1f7fe0'));
+    skyMat.uniforms.horizon.value.set(horizon);
+    scene.fog.color.set(horizon);
+    scene.background.set(horizon);
+    groundMat.color.set(v('--ht-ground', '#5da83a'));
   };
   applyThemeColors();
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyThemeColors);
@@ -210,10 +240,22 @@ export function mountHiveTower(root) {
   new ResizeObserver(resize).observe(canvas.parentElement);
 
   build(3, 1);
-  const clock = new THREE.Clock();
+  if (['solid', 'ghost', 'off'].includes(hash.get('clad'))) setClad(hash.get('clad'));
+  if (hash.has('t')) {
+    time = Math.max(0, Number(hash.get('t')) || 0);
+    playing = false;
+    syncPlay();
+  }
+  if (hash.get('cam') === 'hero') {
+    camera.position.set(-2.1, 1.75, 2.85);
+    controls.target.set(0, tower.derived.crownTop * tower.MM * 0.48, 0);
+  }
+  const timer = new THREE.Timer();
+  timer.connect(document);
   let activeStep = -1;
   const frame = () => {
-    const dt = Math.min(clock.getDelta(), 0.1);
+    timer.update();
+    const dt = Math.min(timer.getDelta(), 0.1);
     const dur = tower.timeline.duration;
     if (playing) time = (time + dt * speed) % dur;
     tower.applyState(tower.timeline.stateAt(time));
@@ -243,11 +285,18 @@ export function mountHiveTower(root) {
     tower.nodes.status.material.emissiveIntensity = busy ? 1.8 : 0.6 + 0.5 * Math.sin(tt * 2);
 
     controls.update();
+    // The dome travels with the camera, so zooming out never pushes its far
+    // side past the camera's far plane (which clipped it to black).
+    sky.position.copy(camera.position);
     renderer.render(scene, camera);
   };
   // Only render while the viewer is on screen (it is embedded in long pages).
   new IntersectionObserver(([entry]) => {
-    if (entry.isIntersecting) { clock.getDelta(); renderer.setAnimationLoop(frame); }
+    if (entry.isIntersecting) {
+      timer.update();
+      timer.getDelta();
+      renderer.setAnimationLoop(frame);
+    }
     else renderer.setAnimationLoop(null);
   }).observe(root);
   frame();
