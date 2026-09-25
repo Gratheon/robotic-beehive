@@ -1,0 +1,65 @@
+<div class="hive-tower" data-hive-tower>
+  <div class="ht-stage">
+    <canvas class="ht-canvas" data-ht="canvas" aria-label="3D model of the Hive Tower robotic beehive"></canvas>
+    <div class="ht-hint">
+      <span class="ht-chip">Drag to orbit · scroll to zoom</span>
+      <span class="ht-chip" data-ht="chip">Step <b>1</b></span>
+    </div>
+    <div class="ht-info" aria-live="polite">
+      <h3 data-ht="info-title">Point at any part</h3>
+      <p data-ht="info-text">Every component has a note: what it is, why it is there, and what it costs the bees.</p>
+    </div>
+  </div>
+  <aside class="ht-panel">
+    <header data-ht="header">
+      <div class="ht-kicker">Gratheon · robotic beehive · concept v3</div>
+      <h1 class="ht-title">Hive Tower</h1>
+      <p class="ht-lede">A weatherproof cabinet that splits the stack, lifts one frame at a time and photographs both faces straight on, and closes the hive again with a rolling landing so bees are not crushed.</p>
+    </header>
+    <section>
+      <div class="ht-label">Playback</div>
+      <div class="ht-transport">
+        <button class="ht-btn ht-primary" data-ht="play" type="button">Pause</button>
+        <input type="range" data-ht="scrub" min="0" max="1000" value="0" aria-label="Timeline position">
+        <span class="ht-mono" data-ht="clock">0.0 s</span>
+      </div>
+    </section>
+    <section>
+      <div class="ht-label">Inspection sequence</div>
+      <ol class="ht-steps" data-ht="steps"></ol>
+    </section>
+    <section>
+      <div class="ht-label">View</div>
+      <div class="ht-controls">
+        <div class="ht-field">
+          <span>Cabinet</span>
+          <div class="ht-seg" role="group" aria-label="Cabinet display" data-ht="clad">
+            <button type="button" data-value="solid" aria-pressed="false">Solid</button>
+            <button type="button" data-value="ghost" aria-pressed="true">Ghost</button>
+            <button type="button" data-value="off" aria-pressed="false">Off</button>
+          </div>
+        </div>
+        <div class="ht-field">
+          <span>Speed</span>
+          <div class="ht-seg" role="group" aria-label="Playback speed" data-ht="speed">
+            <button type="button" data-value="1" aria-pressed="true">1×</button>
+            <button type="button" data-value="2" aria-pressed="false">2×</button>
+            <button type="button" data-value="0.5" aria-pressed="false">½×</button>
+          </div>
+        </div>
+        <label class="ht-field"><span>Boxes in stack</span>
+          <select data-ht="boxes"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select>
+        </label>
+        <label class="ht-field"><span>Box to inspect</span>
+          <select data-ht="inspect"></select>
+        </label>
+        <label class="ht-check"><input type="checkbox" data-ht="xray"> See-through hive</label>
+      </div>
+    </section>
+    <section>
+      <div class="ht-label">Key figures</div>
+      <dl class="ht-specs" data-ht="specs"></dl>
+    </section>
+    <p class="ht-foot">Open source: <a href="https://github.com/Gratheon/robotic-beehive">github.com/Gratheon/robotic-beehive</a>. The same model is available as <a data-ht="glb" href="hive-tower.glb">hive-tower.glb</a> with the inspection animation.</p>
+  </aside>
+</div>

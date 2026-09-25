@@ -191,7 +191,7 @@ def test_model_and_controller_share_geometry():
     assert js["scanPark"] == pytest.approx(g.scan_park)
 
 
-@pytest.mark.skipif(not shutil.which("node"), reason="needs node")
+@pytest.mark.skipif(not shutil.which("node") or not (ROOT / "model/node_modules/esbuild").exists(), reason="needs node + model deps")
 def test_viewer_is_rebuilt(tmp_path):
     """index.html is generated; fail if someone edited the sources without `npm run build`."""
     before = (ROOT / "model/index.html").read_text()
