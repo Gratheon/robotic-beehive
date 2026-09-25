@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800" font-family="Helvetica, Arial, sans-serif">
+<defs><marker id="ac2410c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/></marker><marker id="ab91c1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b91c1c"/></marker><marker id="a1d4ed8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#1d4ed8"/></marker><marker id="a7c3aed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker><marker id="a047857" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#047857"/></marker><style>
+.t { font-size: 14px; font-weight: 700; fill: #111827; }
+.s { font-size: 12px; fill: #374151; }
+.h { font-size: 12px; font-weight: 700; letter-spacing: 1.5px; fill: #6b7280; }
+.w { font-size: 11px; font-weight: 700; }
+</style></defs>
+<rect width="1200" height="800" fill="#fafaf7"/>
+<text x="20" y="22" style="font-size:16px;font-weight:700;fill:#111827">Hive Tower — electrical block diagram</text>
+<text x="20" y="40" class="h">POWER — PLINTH</text>
+<text x="300" y="40" class="h">DISTRIBUTION — CROWN</text>
+<text x="590" y="40" class="h">CONTROL — CROWN</text>
+<text x="880" y="40" class="h">FIELD DEVICES</text>
+<rect x="20" y="60" width="240" height="58" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="30" y="79" class="t">Mains 230 V AC</text>
+<text x="30" y="97" class="s">RCD 30 mA, IP66 inlet, PE to earth rod</text>
+<rect x="20" y="150" width="240" height="74" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="30" y="169" class="t">24 V PSU  ~350 W</text>
+<text x="30" y="187" class="s">Mean Well class, sealed box</text>
+<text x="30" y="202" class="s">feeds the 24 V bus</text>
+<rect x="20" y="256" width="240" height="90" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4" stroke-dasharray="6 4"/>
+<text x="30" y="275" class="t">Solar option</text>
+<text x="30" y="293" class="s">100 W panel → 24 V MPPT</text>
+<text x="30" y="308" class="s">LiFePO4 24 V 20 Ah</text>
+<text x="30" y="323" class="s">joins bus via ideal diode</text>
+<rect x="300" y="60" width="250" height="104" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="310" y="79" class="t">Fuse block (24 V bus)</text>
+<text x="310" y="97" class="s">F1  5 A  logic: Jetsons, board, ESP32</text>
+<text x="310" y="112" class="s">F2 10 A  motor rail (switched)</text>
+<text x="310" y="127" class="s">F3  5 A  heater  ·  F4 3 A  LEDs, fans</text>
+<text x="310" y="142" class="s">(F3/F4 via board MOSFETs)</text>
+<rect x="300" y="196" width="250" height="104" rx="6" fill="#fff7ed" stroke="#b91c1c" stroke-width="1.4"/>
+<text x="310" y="215" class="t">Safety chain → motor rail</text>
+<text x="310" y="233" class="s">E-stop (NC, latching)</text>
+<text x="310" y="248" class="s">→ door interlock (NC reed)</text>
+<text x="310" y="263" class="s">→ relay K1, held by ESP32 watchdog</text>
+<text x="310" y="278" class="s">cuts 24 V motor power only</text>
+<rect x="300" y="332" width="250" height="88" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="310" y="351" class="t">DC-DC converters</text>
+<text x="310" y="369" class="s">24→19 V 5 A  Jetson Orin Nano</text>
+<text x="310" y="384" class="s">24→5 V 5 A  Jetson Nano, USB hub</text>
+<text x="310" y="399" class="s">24→6 V 10 A  servos (motor rail)</text>
+<rect x="590" y="60" width="250" height="72" rx="6" fill="#ecfdf5" stroke="#047857" stroke-width="1.4"/>
+<text x="600" y="79" class="t">Antenna fin (roof)</text>
+<text x="600" y="97" class="s">LTE ×2 + GNSS · Wi-Fi · LoRa 868</text>
+<text x="600" y="112" class="s">surge arrestors at crown entry</text>
+<rect x="590" y="160" width="250" height="92" rx="6" fill="#f0fdf4" stroke="#374151" stroke-width="1.4"/>
+<text x="600" y="179" class="t">Jetson Orin Nano</text>
+<text x="600" y="197" class="s">inspection brain, AI models</text>
+<text x="600" y="212" class="s">Klipper host + Moonraker, NVMe</text>
+<text x="600" y="227" class="s">USB: board, LTE modem, cameras</text>
+<rect x="590" y="280" width="250" height="124" rx="6" fill="#eff6ff" stroke="#374151" stroke-width="1.4"/>
+<text x="600" y="299" class="t">BTT Octopus (Klipper MCU)</text>
+<text x="600" y="317" class="s">MOTOR0-3 step/dir → DM542 ×4</text>
+<text x="600" y="332" class="s">MOTOR4-5 TMC2209 → shuttles</text>
+<text x="600" y="347" class="s">PG6-PG13 endstops · PG14/15 pins</text>
+<text x="600" y="362" class="s">PB6 PB7 PE12 PE13 servos</text>
+<text x="600" y="377" class="s">PA8 strobe · PE5 red · PA2 heater</text>
+<rect x="590" y="432" width="250" height="92" rx="6" fill="#eff6ff" stroke="#374151" stroke-width="1.4"/>
+<text x="600" y="451" class="t">ESP32 + LoRa supervisor</text>
+<text x="600" y="469" class="s">always on, ~0.2 W · UART ↔ Orin</text>
+<text x="600" y="484" class="s">HX711 ×2, BME280 ×2, DS18B20</text>
+<text x="600" y="499" class="s">relays: Jetson power, K1 watchdog</text>
+<rect x="590" y="552" width="250" height="60" rx="6" fill="#f0fdf4" stroke="#374151" stroke-width="1.4"/>
+<text x="600" y="571" class="t">Jetson Nano (old)</text>
+<text x="600" y="589" class="s">Entrance Observer · Ethernet ↔ Orin</text>
+<rect x="880" y="60" width="280" height="60" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="79" class="t">DM542 ×4 → NEMA23 ×4</text>
+<text x="890" y="97" class="s">lift L/R, scan L/R · TR16×4 screws</text>
+<rect x="880" y="138" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="157" class="t">NEMA17 ×2</text>
+<text x="890" y="175" class="s">shuttle belts (TMC2209 StealthChop)</text>
+<rect x="880" y="204" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="223" class="t">Servos ×4 (6 V)</text>
+<text x="890" y="241" class="s">fork L/R, hook L/R</text>
+<rect x="880" y="270" width="280" height="60" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="289" class="t">Switches &amp; sensors</text>
+<text x="890" y="307" class="s">6 endstops (NC) · 2 inductive M8</text>
+<text x="890" y="322" class="s">door reed · E-stop monitor</text>
+<rect x="880" y="348" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="367" class="t">Light &amp; heat</text>
+<text x="890" y="385" class="s">strobe · 660 nm red · PTC heater</text>
+<rect x="880" y="414" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="433" class="t">Cameras (USB)</text>
+<text x="890" y="451" class="s">4 frame cams · varroa sump cam</text>
+<rect x="880" y="480" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
+<text x="890" y="499" class="t">Load cells ×2 + climate</text>
+<text x="890" y="517" class="s">fork blocks · inside/outside air</text>
+<path d="M140,118 L140,150" fill="none" stroke="#c2410c" stroke-width="2.5" marker-end="url(#ac2410c)"/>
+<text x="148" y="138" class="w" fill="#c2410c">230 V</text>
+<path d="M260,187 L300,112" fill="none" stroke="#c2410c" stroke-width="3" marker-end="url(#ac2410c)"/>
+<text x="232" y="146" class="w" fill="#c2410c">24 V</text>
+<path d="M260,300 L282,300 L282,146 L300,146" fill="none" stroke="#c2410c" stroke-width="2.5" stroke-dasharray="5 4" marker-end="url(#ac2410c)"/>
+<path d="M425,164 L425,196" fill="none" stroke="#b91c1c" stroke-width="3" marker-end="url(#ab91c1c)"/>
+<text x="432" y="184" class="w" fill="#b91c1c">F2</text>
+<path d="M300,90 L290,90 L290,376 L300,376" fill="none" stroke="#c2410c" stroke-width="2" marker-end="url(#ac2410c)"/>
+<text x="272" y="240" class="w" fill="#c2410c">F1</text>
+<path d="M425,300 L425,332" fill="none" stroke="#b91c1c" stroke-width="2.5" marker-end="url(#ab91c1c)"/>
+<text x="432" y="320" class="w" fill="#b91c1c">switched</text>
+<path d="M550,350 L564,350 L564,206 L590,206" fill="none" stroke="#c2410c" stroke-width="2" marker-end="url(#ac2410c)"/>
+<text x="520" y="195" class="w" fill="#c2410c">19 V</text>
+<path d="M550,366 L572,366 L572,582 L590,582" fill="none" stroke="#c2410c" stroke-width="2" marker-end="url(#ac2410c)"/>
+<text x="540" y="600" class="w" fill="#c2410c">5 V</text>
+<path d="M550,120 L568,120 L568,330 L590,330" fill="none" stroke="#c2410c" stroke-width="2" marker-end="url(#ac2410c)"/>
+<text x="552" y="114" class="w" fill="#c2410c">24 V</text>
+<path d="M550,136 L576,136 L576,470 L590,470" fill="none" stroke="#c2410c" stroke-width="2" marker-end="url(#ac2410c)"/>
+<path d="M300,270 L280,270 L280,640 L1172,640 L1172,90 L1160,90" fill="none" stroke="#b91c1c" stroke-width="3" marker-end="url(#ab91c1c)"/>
+<text x="600" y="634" class="w" fill="#b91c1c">24 V motor rail (switched) → DM542 ×4, board motor input</text>
+<path d="M425,420 L425,660 L1180,660 L1180,228 L1160,228" fill="none" stroke="#b91c1c" stroke-width="2.2" marker-end="url(#ab91c1c)"/>
+<text x="600" y="676" class="w" fill="#b91c1c">6 V servo bus</text>
+<path d="M715,132 L715,160" fill="none" stroke="#047857" stroke-width="2" marker-end="url(#a047857)"/>
+<text x="722" y="150" class="w" fill="#047857">LTE / GNSS / Wi-Fi</text>
+<path d="M590,110 L584,110 L584,500 L590,500" fill="none" stroke="#047857" stroke-width="1.8" marker-end="url(#a047857)"/>
+<text x="540" y="454" class="w" fill="#047857">LoRa</text>
+<path d="M715,252 L715,280" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#a7c3aed)"/>
+<text x="722" y="270" class="w" fill="#7c3aed">USB</text>
+<path d="M590,596 L580,596 L580,236 L590,236" fill="none" stroke="#7c3aed" stroke-width="1.6" marker-end="url(#a7c3aed)"/>
+<path d="M840,186 L872,186 L872,438 L880,438" fill="none" stroke="#7c3aed" stroke-width="2" marker-end="url(#a7c3aed)"/>
+<text x="846" y="180" class="w" fill="#7c3aed">USB</text>
+<path d="M840,292 L848,292 L848,100 L880,100" fill="none" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#a1d4ed8)"/>
+<text x="846" y="274" class="w" fill="#1d4ed8">step/dir</text>
+<path d="M840,306 L856,306 L856,162 L880,162" fill="none" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#a1d4ed8)"/>
+<path d="M840,320 L862,320 L862,228 L880,228" fill="none" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#a1d4ed8)"/>
+<path d="M840,346 L866,346 L866,300 L880,300" fill="none" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#a1d4ed8)"/>
+<path d="M840,372 L880,372" fill="none" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#a1d4ed8)"/>
+<path d="M840,500 L880,504" fill="none" stroke="#1d4ed8" stroke-width="1.6" marker-end="url(#a1d4ed8)"/>
+<path d="M590,510 L556,510 L556,286 L550,286" fill="none" stroke="#1d4ed8" stroke-width="1.4" marker-end="url(#a1d4ed8)"/>
+<text x="500" y="520" class="w" fill="#1d4ed8">K1 hold</text>
+<text x="20" y="712" class="h">LEGEND</text>
+<line x1="20" y1="730" x2="54" y2="730" stroke="#c2410c" stroke-width="3"/>
+<text x="64" y="734" class="s">24 V / mains power</text>
+<line x1="320" y1="730" x2="354" y2="730" stroke="#b91c1c" stroke-width="3"/>
+<text x="364" y="734" class="s">switched motor power</text>
+<line x1="620" y1="730" x2="654" y2="730" stroke="#1d4ed8" stroke-width="3"/>
+<text x="664" y="734" class="s">signals (step/dir, I/O, UART)</text>
+<line x1="20" y1="754" x2="54" y2="754" stroke="#7c3aed" stroke-width="3"/>
+<text x="64" y="758" class="s">USB / Ethernet</text>
+<line x1="320" y1="754" x2="354" y2="754" stroke="#047857" stroke-width="3"/>
+<text x="364" y="758" class="s">antenna coax</text>
+<line x1="620" y1="754" x2="654" y2="754" stroke="#374151" stroke-width="3" stroke-dasharray="5 4"/>
+<text x="664" y="758" class="s">optional</text>
+<text x="20" y="784" class="s">Frame, crown plate and antenna ground bonded to PE and an earth rod. Motor cable shields grounded at the driver end only.</text>
+</svg>
