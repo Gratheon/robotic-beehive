@@ -5,6 +5,7 @@
   "description": "Parametric 3D model of the Gratheon Robotic Beehive",
   "scripts": {
     "build": "node export-glb.mjs && node build-viewer.mjs",
+    "preview": "node build-viewer.mjs && node render-preview.mjs",
     "website": "node export-glb.mjs && node build-viewer.mjs --website ../../gratheon.com"
   },
   "dependencies": {

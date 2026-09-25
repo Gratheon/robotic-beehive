@@ -9,8 +9,10 @@
   --ht-accent: #e0a800;
   --ht-accent-ink: #5a4300;
   --ht-accent-soft: #f7e7b0;
-  --ht-scene: #dfe3dc;
-  --ht-ground: #b9c2b0;
+  /* Scene colours: always a sunny day, whatever the page theme. */
+  --ht-sky: #1f7fe0;
+  --ht-scene: #cfe8f8;
+  --ht-ground: #5da83a;
   --ht-focus: #b37f00;
   --ht-display: "Barlow Condensed", "Scada", "Arial Narrow", sans-serif;
   --ht-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -29,17 +31,17 @@
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) .hive-tower {
     --ht-bg: #121512; --ht-panel: #181c18; --ht-ink: #e7ebe4; --ht-muted: #9aa597; --ht-line: #2c332c;
-    --ht-accent: #f2bd1d; --ht-accent-ink: #f7d770; --ht-accent-soft: #3a3016; --ht-scene: #1a1f1b; --ht-ground: #2a3326; --ht-focus: #f2bd1d;
+    --ht-accent: #f2bd1d; --ht-accent-ink: #f7d770; --ht-accent-soft: #3a3016; --ht-focus: #f2bd1d;
     color-scheme: dark;
   }
 }
 html[data-theme="dark"] .hive-tower {
   --ht-bg: #121512; --ht-panel: #181c18; --ht-ink: #e7ebe4; --ht-muted: #9aa597; --ht-line: #2c332c;
-  --ht-accent: #f2bd1d; --ht-accent-ink: #f7d770; --ht-accent-soft: #3a3016; --ht-scene: #1a1f1b; --ht-ground: #2a3326; --ht-focus: #f2bd1d;
+  --ht-accent: #f2bd1d; --ht-accent-ink: #f7d770; --ht-accent-soft: #3a3016; --ht-focus: #f2bd1d;
   color-scheme: dark;
 }
 .hive-tower *, .hive-tower *::before, .hive-tower *::after { box-sizing: border-box; }
-.hive-tower .ht-stage { position: relative; min-height: 0; background: var(--ht-scene); }
+.hive-tower .ht-stage { position: relative; min-height: 0; background: linear-gradient(var(--ht-sky), var(--ht-scene) 62%); }
 .hive-tower .ht-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; }
 .hive-tower .ht-panel { background: var(--ht-panel); border-left: 1px solid var(--ht-line); overflow-y: auto; padding: 18px 18px 24px; display: flex; flex-direction: column; gap: 18px; }
 .hive-tower h1, .hive-tower h3 { color: var(--ht-ink); }
@@ -89,3 +91,5 @@ html[data-theme="dark"] .hive-tower {
   .hive-tower { grid-template-columns: 1fr; grid-template-rows: min(62vh, 520px) auto; height: auto; }
   .hive-tower .ht-panel { border-left: 0; border-top: 1px solid var(--ht-line); overflow: visible; padding-inline: 16px; }
 }
+.hive-tower.ht-shot { grid-template-columns: minmax(0, 1fr); }
+.hive-tower.ht-shot .ht-panel, .hive-tower.ht-shot .ht-info, .hive-tower.ht-shot .ht-hint { display: none; }
