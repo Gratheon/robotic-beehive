@@ -39,6 +39,11 @@ class HiveGeometry:
     # until the pin sits `slot_engaged` in front of the centre bar, then pushes.
     slot_approach: float = 26.0
     slot_engaged: float = 8.0
+    # Once a frame hangs, its pin head drops into a pocket in the plate, so it
+    # can be carried either way. Below this lift the pin is free to slide out.
+    pocket_depth: float = 1.5
+    # Frames are photographed centred between the front and back cameras.
+    photo_z: float = 0.0
     beam_clearance: float = 119.0  # min lift - scan (beam bodies + 5 mm margin)
     bee_clearance: float = 40.0  # frame top to lifted stack bottom
     max_tilt: float = 35.0  # max left/right height difference of the lifted stack
@@ -100,8 +105,9 @@ def default_axes(g: HiveGeometry) -> Dict[str, AxisConfig]:
         # TR16x4 is self-locking (lead angle ~4.5 deg), so nothing drops on power
         # loss, and its whip limit at 1.5 m (~1000 rpm) allows 40 mm/s.
         # Lift min/home keeps the lift beam above a parked scan beam.
-        axes[f"lift_{side}"] = AxisConfig(f"lift_{side}", g.base + 160, top, g.base + 160, 15.0, 40.0, 4.0, 1600)
-        axes[f"scan_{side}"] = AxisConfig(f"scan_{side}", g.plinth + 180, top - g.beam_clearance, g.plinth + 180, 40.0, 80.0, 4.0, 1600)
+        axes[f"lift_{side}"] = AxisConfig(f"lift_{side}", g.base + 170, top, g.base + 170, 15.0, 40.0, 4.0, 1600)
+        # scan min keeps the hanging frame cameras above the plinth
+        axes[f"scan_{side}"] = AxisConfig(f"scan_{side}", g.plinth + 200, top - g.beam_clearance, g.plinth + 200, 40.0, 80.0, 4.0, 1600)
         # NEMA17 + GT2 20T belt
         axes[f"shuttle_{side}"] = AxisConfig(f"shuttle_{side}", -235.0, 235.0, -235.0, 80.0, 400.0, 40.0, 3200)
     return axes

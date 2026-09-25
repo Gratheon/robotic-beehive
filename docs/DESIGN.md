@@ -3,7 +3,7 @@
 A static, weatherproof cabinet around a standard vertical hive. The robot inspects one box at a time:
 
 1. It raises everything above that box by 400 mm, cracking the propolis seal one edge at a time.
-2. It lifts each frame straight up, past four cameras, then sets it down in the free gap next to it.
+2. It lifts each frame straight up, carries it to a photo spot in the middle of the box where four cameras shoot both faces straight on, then sets it down in the free gap next to it.
 3. It closes the hive again so that contact rolls across the rim.
 
 Everything moving lives outside the bee space. The only changes to the hive itself are steel cleats on the boxes and two steel pins per frame.
@@ -41,11 +41,21 @@ Coordinates follow the model: X left/right, Y up, Z front (+, entrance) / back (
 | Skeleton | 4 corner posts of 22 mm aluminium extrusion, plinth ring, crown ring. Footprint 810 × 666 mm, height ≈1.99 m for 3 boxes (+285 mm per extra box). |
 | Linear guides | MGN12 rail on the inner face of each post. Each post carries one lift-beam carriage and one scan-beam carriage. V-wheels on V-slot extrusion also work if the extrusion allows it. |
 | Lift beams (L, R) | NEMA23 + DM542 + TR16×4 lead screw hung from the crown (the screw works in tension). A servo-turned fork shaft carries two fingers that swing under the box cleats. Bar load cells sit in the fork bearing blocks. |
-| Scan beams (L, R) | Same drive as the lift beams. Each carries a belt-driven **shuttle** (NEMA17 + GT2) holding the frame hook, two cameras, the strobe and an inductive pin sensor. |
-| Hook | A servo swings an L-shaped hook over the box wall. Its H-shaped tip plate has two back-to-back slots, so it can push a frame toward the gap in either direction. It slides sideways around the pin neck and never presses down on the top bars. |
+| Scan beams (L, R) | Same drive as the lift beams. Each carries a belt-driven **shuttle** (NEMA17 + GT2) holding the frame hook and an inductive pin sensor, plus two frame cameras on arms (one in front of the box, one behind). |
+| Frame cameras | 4 × 12 MP (IMX477 class, ~6 mm lens), portrait, at z = ±265 mm: in the 40 mm between box and cladding, so they never pass over the hive. Each looks straight at the comb from 240 mm and covers one half of a face (x = ±90 mm). A ring strobe with crossed polarisers removes glare from nectar and capping. See *Seeing into the cells* below. |
+| Hook | A servo swings an L-shaped hook over the box wall. Its H-shaped tip plate has two back-to-back slots, so it can push a frame toward the gap in either direction. It slides sideways around the pin neck and never presses down on the top bars. Once the frame hangs, the pin head drops into a 1.5 mm pocket, so a lifted frame can be carried either way without sliding out. |
 | Box changes | Stainless 30×30 angle cleat on the left and right walls of every box and the lid, 25 mm above the box bottom. They double as hand grips. |
 | Frame changes | Two stainless M5 shoulder screws on each top bar ear (neck 2.5 mm, head 2.5 mm; they fit inside the bee space) and an ArUco tag on the end bar. |
 | Bottom board | 150 mm tall screened "varroa sump": white tray, fixed wide-angle camera, no moving parts. |
+
+**Seeing into the cells.** A cell is 5.4 mm wide and about 11 mm deep, and it slopes up 9–13°. Eggs lie at the bottom, so the camera must look nearly down the cell axis.
+
+- *Before (v3.0).* Cameras hung beside the frame's ends and looked along the face. The far half of the comb was seen up to 77° off-axis, which shows cell walls, not contents.
+- *Now.* The cameras face the comb. The worst corner is about 35° off-axis and most of the comb is within 25°, so the camera sees to the bottom of the cell.
+- *Low mount.* The cameras sit 10 mm below comb centre. Lower rows, whose cells slope away from the camera, are then seen more nearly along their axis.
+- *Same photo spot.* Every frame is photographed at the same place (centred between the cameras). Distance, focus and mm-per-pixel are identical for every frame, which makes cell counts and sizes comparable over time. At 12 MP a cell is about 60 px across and an egg about 18 px long.
+- *Cost.* Carrying the frame to the spot and back adds about 5 s per frame.
+- *Entrance.* Because the front cameras pass the entrance on their way down, the entrance is two 120 mm tunnels, one either side of the cameras' path.
 
 **Why TR16×4 lead screws everywhere.** Each screw hangs from a thrust bearing in the crown, so the load puts it in tension and it cannot buckle.
 
@@ -72,7 +82,7 @@ This is the sequence in `hivebot/sequences.py`. The simulator in `hivebot/motion
    1. The hook lands 26 mm beside the pin at 8 mm/s. *(It may not land on a pin head.)*
    2. It slides onto the pin neck and pushes the frame 10 mm toward the gap.
    3. It peels the ears 2 mm, one end at a time, then lifts 300 mm at 40 mm/s. *(The frame top must stay 40 mm below the bees hanging under the raised stack.)*
-   4. Strobe and capture: 4 cameras, both faces, each face seen from both ends.
+   4. Carry the frame to the photo spot (middle of the box). Strobe and capture: 4 cameras, both faces straight on, each face in two halves.
    5. The frame moves over the gap. It is lowered at 35 mm/s, and the last 20 mm at 3 mm/s. *(Checked.)*
    6. The hook slides off.
 8. The scan beams park. The stack lowers to 30 mm above the rim.
@@ -80,7 +90,7 @@ This is the sequence in `hivebot/sequences.py`. The simulator in `hivebot/motion
 10. **Rolling close** in 2 mm steps at 2 mm/s. *(Landing faster is refused.)* If the load cells report contact more than 5 mm above the rim, the robot stops, backs off 20 mm and raises an alarm. That catches fingers, tools and fallen comb.
 11. Forks out, beams park, photos upload.
 
-**Timing (simulated):** ≈40 s per frame. A box is open for about 9 minutes. A full visit takes 9–11 minutes depending on which box. Run `python3 -m hivebot plan --box 1` to see every move with its duration. Only the target box is ever open; the rest of the stack stays closed and warm.
+**Timing (simulated):** ≈45 s per frame. A box is open for about 10 minutes. A full visit takes 9.5–12 minutes depending on which box. Run `python3 -m hivebot plan --box 1` to see every move with its duration. Only the target box is ever open; the rest of the stack stays closed and warm.
 
 ## 4. Bee welfare checklist
 
@@ -92,7 +102,7 @@ This is the sequence in `hivebot/sequences.py`. The simulator in `hivebot/motion
 - Only one box open at a time, with open time budgeted and measured.
 - Bees that drop fall back into their own box: frames and the stack are only ever directly above it.
 - The cabinet keeps robbing bees, wasps and hornets away from the open box.
-- The entrance tunnel keeps the flight path clear of every moving part. The robot's service side is the back.
+- The two entrance tunnels keep the flight path clear of every moving part. The robot's service side is the back.
 
 ## 5. Weather, materials, ecology
 
@@ -148,7 +158,7 @@ Coax runs are short (crown to roof, under 0.5 m) with surge arrestors where they
 The skeleton is designed as a separable **yoke**: posts, beams and crown are one unit. The hive side is a **dock**: plinth, bottom board, cleated boxes. Two steps later:
 
 1. **Shared yoke on a trolley.** The yoke unbolts from one dock and bolts onto the next. Three docking cones in V-grooves set it back within ±0.5 mm, so frame positions and cleat heights stay valid.
-2. **Wheeled yoke (robotic apiary).** The same yoke on a skid-steer base, open at the back. It drives over a dock from behind, away from the flight path, lowers onto the cones and runs the same `hivebot` sequence. Each dock then needs only a light weather hood with a rear door. The expensive part (yoke, motors, compute) is shared across about 10 hives. Toggle "Mobile base" in the viewer to see it.
+2. **Wheeled yoke (robotic apiary).** The same yoke on a skid-steer base, open at the back. It drives over a dock from behind, away from the flight path, lowers onto the cones and runs the same `hivebot` sequence. Each dock then needs only a light weather hood with a rear door. The expensive part (yoke, motors, compute) is shared across about 10 hives.
 
 This is why the model keeps all motors and electronics on the yoke, and why frame positions are stored per hive and re-checked by the pin sensors on every visit.
 
@@ -160,13 +170,13 @@ Parts you already have (Jetsons, 24 V PSU, extrusions, NEMA23s, DM542s) are coun
 |---|---|---|
 | Motion | MGN12 rails ×4 with carriages 120 · TR16×4 screws ×4 with brass nuts 90 · BK/BF12 bearing sets ×4 60 · couplings 20 · NEMA17 ×2 + GT2 belts and pulleys 40 · servos ×4 (waterproof metal gear) 60 · fork shafts, bearings, 2 load cells + HX711 35 · extra NEMA23/DM542 if short 0–130 · brackets, T-nuts, stainless fasteners 40 | 465–595 |
 | Hive kit | Stainless cleats for 4 boxes + lid 30 · frame pins (80) 20 · ArUco tags 5 | 55 |
-| Electronics | BTT Octopus 70 · NVMe 256 GB 30 · USB cameras ×4 120 · varroa camera 25 · LED strobe + red strip 25 · ESP32 LoRa 25 · LTE modem 45 · antennas, bulkheads, surge arrestors 50 · DC-DC ×3 35 · E-stop, reed switch, relays, fuses, GX16, glands 60 · endstops + inductive sensors 20 · climate sensors 15 · cable chains and cable 40 · PTC heater 20 · sealed PSU box 20 | 620 |
+| Electronics | BTT Octopus 70 · NVMe 256 GB 30 · 12 MP cameras ×4 (IMX477 class, USB or CSI mux) 240 · polariser film 15 · varroa camera 25 · LED ring strobes + red strip 30 · ESP32 LoRa 25 · LTE modem 45 · antennas, bulkheads, surge arrestors 50 · DC-DC ×3 35 · E-stop, reed switch, relays, fuses, GX16, glands 60 · endstops + inductive sensors 20 · climate sensors 15 · cable chains and cable 40 · PTC heater 20 · sealed PSU box 20 | 780 |
 | Cabinet | Thermo-pine cladding ~6 m² 120 · wood-fibre board 40 · plywood backers, roof board 60 · charred skirt 25 · polycarbonate window 15 · hinges, lock, EPDM seals, insect mesh, hex vent panel 60 · levelling feet 20 · roof flashing 20 | 360 |
-| **Total** | | **≈1,500–1,630** |
+| **Total** | | **≈1,660–1,790** |
 | Solar option | 100 W panel 70 · 24 V MPPT 50 · LiFePO4 24 V 20 Ah 200 | 320 |
 
 Ways to cut cost:
-- Two cameras instead of four (−€60; each face is then seen from one end only).
+- One centred camera per face instead of two (−€120; the comb edges are then seen at up to ~40°, still far better than v3.0).
 - V-wheels instead of rails (−€90).
 - Painted plywood instead of thermo-pine (−€60).
 - Skip the heater and inspect only on warm days (−€20).

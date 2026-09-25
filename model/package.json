@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Parametric 3D model of the Gratheon robotic beehive (Hive Tower)",
   "scripts": {
-    "build": "node export-glb.mjs",
+    "build": "node build-viewer.mjs && node export-glb.mjs",
     "serve": "cd .. && python3 -m http.server 8080"
   },
   "dependencies": {

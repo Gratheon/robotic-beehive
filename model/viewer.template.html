@@ -104,7 +104,7 @@
     <header>
       <div class="kicker">Gratheon · robotic beehive · concept v3</div>
       <h1>Hive Tower</h1>
-      <p class="lede">A weatherproof cabinet that splits the stack, lifts one frame at a time straight up past four cameras, and closes the hive again with a rolling landing so bees are not crushed.</p>
+      <p class="lede">A weatherproof cabinet that splits the stack, lifts one frame at a time and photographs both faces straight on, and closes the hive again with a rolling landing so bees are not crushed.</p>
     </header>
 
     <section>
@@ -147,7 +147,6 @@
           <select id="inspect"></select>
         </label>
         <label class="check" for="xray"><input type="checkbox" id="xray"> See-through hive</label>
-        <label class="check" for="mobile"><input type="checkbox" id="mobile"> Mobile base (future)</label>
       </div>
     </section>
 
@@ -156,7 +155,7 @@
       <dl class="specs" id="specs"></dl>
     </section>
 
-    <p class="foot">Built from <code>hive-model.js</code>, the same source <code>export-glb.mjs</code> uses to write <code>hive-tower.glb</code> with the sequence baked in as the <code>inspection</code> clip.</p>
+    <p class="foot">Built from <code>hive-model.js</code> (inlined by <code>build-viewer.mjs</code>), the same source <code>export-glb.mjs</code> uses to write <code>hive-tower.glb</code> with the sequence baked in as the <code>inspection</code> clip.</p>
   </aside>
 </div>
 
@@ -251,7 +250,6 @@ function build(boxes, inspect) {
   renderSpecs();
   setClad(cladMode);
   setXray($('xray').checked);
-  setMobile($('mobile').checked);
   const top = tower.derived.crownTop * tower.MM;
   controls.target.y = top * 0.5;
 }
@@ -277,11 +275,6 @@ function setXray(on) {
     Object.assign(m, { transparent: on, opacity: on ? 0.22 : 1, depthWrite: !on });
     m.needsUpdate = true;
   }
-}
-function setMobile(on) {
-  tower.nodes.mobile.visible = on;
-  tower.nodes.feet.visible = !on;
-  tower.root.position.y = on ? 0.02 : 0;
 }
 
 // ---- panel ---------------------------------------------------------------
@@ -320,8 +313,8 @@ function renderSpecs() {
     ['Stack open gap', `${p.gap} mm`],
     ['Frame lift', `${p.frameLift} mm, kept vertical`],
     ['Motors', '4 × NEMA23 · 2 × NEMA17 · 4 servos'],
-    ['Box open time', '≈ 9 min for 10 frames (simulated)'],
-    ['New parts', '≈ €1,500–1,630 (+€320 solar)'],
+    ['Box open time', '≈ 10 min for 10 frames (simulated)'],
+    ['New parts', '≈ €1,660–1,790 (+€320 solar)'],
   ];
   $('specs').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
 }
@@ -332,7 +325,6 @@ $('cladSolid').onclick = () => setClad('solid');
 $('cladGhost').onclick = () => setClad('ghost');
 $('cladOff').onclick = () => setClad('off');
 $('xray').addEventListener('change', (e) => setXray(e.target.checked));
-$('mobile').addEventListener('change', (e) => setMobile(e.target.checked));
 for (const [id, v] of [['speed1', 1], ['speed2', 2], ['speed05', 0.5]]) {
   $(id).onclick = () => {
     speed = v;

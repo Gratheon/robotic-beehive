@@ -276,12 +276,15 @@ class SimBackend(MotionBackend):
         z0 = self.frames[k][i]
         dz = end["shuttle_left"] - start["shuttle_left"]
         if abs(dz) > EPS and dz * self.hook_dir < 0:
-            if dy0 > 0.5 or dy1 > 0.5:
-                self._fail(f"frame {i} would slide out of the open end of the hook slot")
-            # at rest height, moving backwards slides the hook off the pin
-            if abs(end["shuttle_left"] - (z0 - self.hook_dir * g.slot_engaged)) >= 10:
-                self.hooked, self.hook_dir = None, 0
-            return
+            if max(dy0, dy1) <= g.pocket_depth:
+                # at rest height, moving backwards slides the hook off the pin
+                if 0.5 < max(dy0, dy1):
+                    self._fail(f"frame {i}: hook pulled back while the frame is half lifted")
+                if abs(end["shuttle_left"] - (z0 - self.hook_dir * g.slot_engaged)) >= 10:
+                    self.hooked, self.hook_dir = None, 0
+                return
+            if min(dy0, dy1) <= g.pocket_depth:
+                self._fail(f"frame {i} pulled backwards before its pin sits in the pocket")
         z1 = z0 + dz
         stack_bottom = min(self.lifted(s) for s in SIDES)  # above rim
         if dy1 - g.frame_top_below_rim > stack_bottom - g.bee_clearance + EPS:

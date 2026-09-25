@@ -224,6 +224,9 @@ class Inspector:
         for s in SCAN:  # peel the ear propolis one end at a time
             self.m.move({s: e + 2}, sp.frame_peel)
         self.m.move(both(SCAN, e + g.frame_lift), sp.frame_up)
+        # Same photo spot for every frame: centred between the cameras, so
+        # distance, focus and mm-per-pixel never change.
+        self.m.move(both(SHUTTLE, g.photo_z - push * g.slot_engaged), sp.shuttle)
         images = self.capture.capture({"box": k, "frame": i, "z": round(z, 1), "side": "both"})
         self.m.move(both(SHUTTLE, target - push * g.slot_engaged), sp.shuttle)
         self.m.move(both(SCAN, e + sp.frame_landing_zone), sp.frame_down)

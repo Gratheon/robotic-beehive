@@ -50,6 +50,27 @@ def test_full_inspection_every_box(box):
             assert sim.frames[k] == pytest.approx(sim.g.frame_z())
 
 
+def test_every_frame_is_photographed_at_the_photo_spot():
+    class SpyCapture(NullCapture):
+        def __init__(self, sim):
+            super().__init__()
+            self.sim = sim
+
+        def capture(self, meta):
+            k, i = meta["box"], self.sim.hooked
+            self.shots.append((self.sim.frames[k][i], self.sim.lifted("left")))
+            return []
+
+    cfg = RobotConfig()
+    sim = SimBackend(cfg)
+    cam = SpyCapture(sim)
+    insp = Inspector(sim, cfg, capture=cam)
+    insp.home()
+    insp.inspect(1)
+    assert len(cam.shots) == 10
+    assert all(z == pytest.approx(cfg.geometry.photo_z) for z, _ in cam.shots)
+
+
 def test_second_visit_walks_the_gap_back():
     sim, insp, _ = make()
     insp.inspect(1)
@@ -168,3 +189,11 @@ def test_model_and_controller_share_geometry():
     assert js["gap"] == pytest.approx(g.gap_width)
     assert js["liftPark"] == pytest.approx(g.lift_park)
     assert js["scanPark"] == pytest.approx(g.scan_park)
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="needs node")
+def test_viewer_is_rebuilt(tmp_path):
+    """index.html is generated; fail if someone edited the sources without `npm run build`."""
+    before = (ROOT / "model/index.html").read_text()
+    subprocess.run(["node", "build-viewer.mjs"], cwd=ROOT / "model", check=True, capture_output=True)
+    assert (ROOT / "model/index.html").read_text() == before, "run `npm run build` in model/"
