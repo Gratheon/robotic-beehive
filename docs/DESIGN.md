@@ -106,6 +106,8 @@ This is the sequence in `hivebot/sequences.py`. The simulator in `hivebot/motion
 
 ## 5. Weather, materials, ecology
 
+The Robotic Beehive follows the [hardware design principles](https://gratheon.com/docs/hardware-design-principles/) shared by all Gratheon hardware: wood first, aluminium where it must be strong, plastic only where nothing else works, A2 stainless fasteners, flat-pack parts from any workshop, every part replaceable, and bees first. Known deviation: the stainless box cleats and frame pins add metal to every box; hardwood cleats are worth testing.
+
 | Area | Choice |
 |---|---|
 | Cladding | Vertical thermally-modified pine boards over a wood-fibre insulation board. No chemical wood preservatives, which harm bees. The plinth skirt is yakisugi (charred) wood against splash and rot. |
