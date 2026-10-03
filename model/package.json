@@ -6,7 +6,8 @@
   "scripts": {
     "build": "node export-glb.mjs && node build-viewer.mjs",
     "preview": "node build-viewer.mjs && node render-preview.mjs",
-    "website": "node export-glb.mjs && node build-viewer.mjs --website ../../gratheon.com"
+    "website": "node export-glb.mjs && node build-viewer.mjs --website ../../gratheon.com",
+    "sync-observer": "cp ../../entrance-observer/3d-model/observer-model.js vendor/observer-model.js"
   },
   "dependencies": {
     "three": "0.186.1"

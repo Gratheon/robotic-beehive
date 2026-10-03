@@ -47,13 +47,20 @@
             <button type="button" data-value="0.5" aria-pressed="false">½×</button>
           </div>
         </div>
-        <label class="ht-field"><span>Boxes in stack</span>
-          <select data-ht="boxes"><option value="2">2</option><option value="3" selected>3</option><option value="4">4</option></select>
+        <label class="ht-field"><span>Stack, bottom to top</span>
+          <select data-ht="stack">
+            <option value="deep,deep">2 deep</option>
+            <option value="deep,deep,deep">3 deep</option>
+            <option value="deep,deep,super" selected>2 deep + super</option>
+            <option value="deep,deep,super,super">2 deep + 2 supers</option>
+            <option value="deep,super,super,super">1 deep + 3 supers</option>
+          </select>
         </label>
         <label class="ht-field"><span>Box to inspect</span>
           <select data-ht="inspect"></select>
         </label>
         <label class="ht-check"><input type="checkbox" data-ht="xray"> See-through hive</label>
+        <label class="ht-check"><input type="checkbox" data-ht="door"> Open service door</label>
       </div>
     </section>
     <section>

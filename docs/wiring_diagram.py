@@ -44,20 +44,20 @@ box(20, 256, 240, 90, "Solar option", ["100 W panel → 24 V MPPT", "LiFePO4 24 
 
 box(300, 60, 250, 104, "Fuse block (24 V bus)", ["F1  5 A  logic: Jetsons, board, ESP32", "F2 10 A  motor rail (switched)", "F3  5 A  heater  ·  F4 3 A  LEDs, fans", "(F3/F4 via board MOSFETs)"])
 box(300, 196, 250, 104, "Safety chain → motor rail", ["E-stop (NC, latching)", "→ door interlock (NC reed)", "→ relay K1, held by ESP32 watchdog", "cuts 24 V motor power only"], fill="#fff7ed", stroke=MOTOR)
-box(300, 332, 250, 88, "DC-DC converters", ["24→19 V 5 A  Jetson Orin Nano", "24→5 V 5 A  Jetson Nano, USB hub", "24→6 V 10 A  servos (motor rail)"])
+box(300, 332, 250, 88, "DC-DC converters", ["24→19 V 5 A  Jetson Orin Nano", "24→5 V 5 A USB hub · PoE+ 48 V", "24→6 V 10 A  servos (motor rail)"])
 
 box(590, 60, 250, 72, "Antenna fin (roof)", ["LTE ×2 + GNSS · Wi-Fi · LoRa 868", "surge arrestors at crown entry"], fill="#ecfdf5", stroke=RF)
-box(590, 160, 250, 92, "Jetson Orin Nano", ["inspection brain, AI models", "Klipper host + Moonraker, NVMe", "USB: board, LTE modem, cameras"], fill="#f0fdf4")
+box(590, 160, 250, 92, "Jetson Orin Nano", ["inspection brain, AI models", "Klipper host + Moonraker, NVMe", "CSI: 2 frame cams · USB: board, modem"], fill="#f0fdf4")
 box(590, 280, 250, 124, "BTT Octopus (Klipper MCU)", ["MOTOR0-3 step/dir → DM542 ×4", "MOTOR4-5 TMC2209 → shuttles", "PG6-PG13 endstops · PG14/15 pins", "PB6 PB7 PE12 PE13 servos", "PA8 strobe · PE5 red · PA2 heater"], fill="#eff6ff")
 box(590, 432, 250, 92, "ESP32 + LoRa supervisor", ["always on, ~0.2 W · UART ↔ Orin", "HX711 ×2, BME280 ×2, DS18B20", "relays: Jetson power, K1 watchdog"], fill="#eff6ff")
-box(590, 552, 250, 60, "Jetson Nano (old)", ["Entrance Observer · Ethernet ↔ Orin"], fill="#f0fdf4")
+box(590, 552, 250, 60, "Entrance Observer", ["own Pi 5 + Hailo pod · PoE+ ↔ Orin"], fill="#f0fdf4")
 
 box(880, 60, 280, 60, "DM542 ×4 → NEMA23 ×4", ["lift L/R, scan L/R · TR16×4 screws"])
 box(880, 138, 280, 48, "NEMA17 ×2", ["shuttle belts (TMC2209 StealthChop)"])
 box(880, 204, 280, 48, "Servos ×4 (6 V)", ["fork L/R, hook L/R"])
 box(880, 270, 280, 60, "Switches & sensors", ["6 endstops (NC) · 2 inductive M8", "door reed · E-stop monitor"])
 box(880, 348, 280, 48, "Light & heat", ["strobe · 660 nm red · PTC heater"])
-box(880, 414, 280, 48, "Cameras (USB)", ["4 frame cams · varroa sump cam"])
+box(880, 414, 280, 48, "Cameras", ["2 frame cams (CSI) · rim + varroa (USB)"])
 box(880, 480, 280, 48, "Load cells ×2 + climate", ["fork blocks · inside/outside air"])
 
 # ---------------------------------------------------------------- wires

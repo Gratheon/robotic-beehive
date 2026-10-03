@@ -50,7 +50,7 @@ def test_full_inspection_every_box(box):
             assert sim.frames[k] == pytest.approx(sim.g.frame_z())
 
 
-def test_every_frame_is_photographed_at_the_photo_spot():
+def test_every_frame_is_photographed_centred():
     class SpyCapture(NullCapture):
         def __init__(self, sim):
             super().__init__()
@@ -58,7 +58,7 @@ def test_every_frame_is_photographed_at_the_photo_spot():
 
         def capture(self, meta):
             k, i = meta["box"], self.sim.hooked
-            self.shots.append((self.sim.frames[k][i], self.sim.lifted("left")))
+            self.shots.append((self.sim.frames[k][i], self.sim.camera_offset()))
             return []
 
     cfg = RobotConfig()
@@ -66,9 +66,24 @@ def test_every_frame_is_photographed_at_the_photo_spot():
     cam = SpyCapture(sim)
     insp = Inspector(sim, cfg, capture=cam)
     insp.home()
-    insp.inspect(1)
-    assert len(cam.shots) == 10
-    assert all(z == pytest.approx(cfg.geometry.photo_z) for z, _ in cam.shots)
+    for box in range(cfg.geometry.boxes):  # deep, deep, super
+        cam.shots.clear()
+        insp.inspect(box)
+        assert len(cam.shots) == 10
+        assert all(z == pytest.approx(cfg.geometry.photo_z) for z, _ in cam.shots)
+        # comb centre level with the cameras, for deep and shallow frames alike
+        assert all(off == pytest.approx(0, abs=0.5) for _, off in cam.shots)
+
+
+@pytest.mark.parametrize("stack", [("deep", "super", "super", "super"), ("deep", "deep")])
+def test_other_stacks(stack):
+    cfg = RobotConfig()
+    cfg = replace(cfg, geometry=replace(cfg.geometry, stack=stack))
+    sim, insp, cam = make(cfg, SimHive(box_kg=[30, 12, 12, 12]))
+    for box in range(len(stack)):
+        insp.inspect(box)
+        assert_closed(sim)
+    assert len(cam.shots) == 10 * len(stack)
 
 
 def test_second_visit_walks_the_gap_back():
@@ -177,7 +192,9 @@ def test_model_and_controller_share_geometry():
     script = (
         "import('./hive-model.js').then(m => { const d = m.derive(m.DEFAULTS);"
         "console.log(JSON.stringify({engage: d.engage, cleat2: d.cleatY(2), liftMax: d.liftMax, frameZ: d.frameZ, gap: d.gapWidth,"
-        "liftPark: d.liftPark, scanPark: d.scanPark})) })"
+        "liftPark: d.liftPark, scanPark: d.scanPark, hiveZ: d.hiveZ, photoZ: d.photoZ,"
+        "rims: [0, 1, 2].map(k => m.derive({ ...m.DEFAULTS, inspectBox: k }).rim),"
+        "lifts: [0, 1, 2].map(k => m.derive({ ...m.DEFAULTS, inspectBox: k }).frameLift), camDrop: d.camDrop})) })"
     )
     out = subprocess.run(["node", "--input-type=module", "-e", script], cwd=ROOT / "model", capture_output=True, text=True, check=True)
     js = json.loads(out.stdout)
@@ -185,7 +202,12 @@ def test_model_and_controller_share_geometry():
     assert js["engage"] == pytest.approx(g.engage(1))
     assert js["cleat2"] == pytest.approx(g.cleat(2))
     assert js["liftMax"] == pytest.approx(g.cleat(g.boxes) + g.gap)
-    assert js["frameZ"] == pytest.approx(g.frame_z())
+    assert [z + js["hiveZ"] for z in js["frameZ"]] == pytest.approx(g.frame_z())
+    assert js["hiveZ"] == pytest.approx(g.hive_z)
+    assert js["photoZ"] == pytest.approx(g.photo_z)
+    assert js["rims"] == pytest.approx([g.rim(k) for k in range(g.boxes)])
+    assert js["lifts"] == pytest.approx([g.frame_lift(k) for k in range(g.boxes)])
+    assert js["camDrop"] == pytest.approx(g.cam_drop)
     assert js["gap"] == pytest.approx(g.gap_width)
     assert js["liftPark"] == pytest.approx(g.lift_park)
     assert js["scanPark"] == pytest.approx(g.scan_park)
@@ -197,3 +219,12 @@ def test_viewer_is_rebuilt(tmp_path):
     before = (ROOT / "model/index.html").read_text()
     subprocess.run(["node", "build-viewer.mjs"], cwd=ROOT / "model", check=True, capture_output=True)
     assert (ROOT / "model/index.html").read_text() == before, "run `npm run build` in model/"
+
+
+SIBLING_OBSERVER = ROOT.parent / "entrance-observer/3d-model/observer-model.js"
+
+
+@pytest.mark.skipif(not SIBLING_OBSERVER.exists(), reason="entrance-observer repo not checked out next to this one")
+def test_vendored_observer_is_current():
+    """model/vendor/observer-model.js must match entrance-observer; run `npm run sync-observer`."""
+    assert (ROOT / "model/vendor/observer-model.js").read_text() == SIBLING_OBSERVER.read_text(), "run `npm run sync-observer` in model/"

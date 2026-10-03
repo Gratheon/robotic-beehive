@@ -38,7 +38,7 @@
 <rect x="300" y="332" width="250" height="88" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
 <text x="310" y="351" class="t">DC-DC converters</text>
 <text x="310" y="369" class="s">24→19 V 5 A  Jetson Orin Nano</text>
-<text x="310" y="384" class="s">24→5 V 5 A  Jetson Nano, USB hub</text>
+<text x="310" y="384" class="s">24→5 V 5 A USB hub · PoE+ 48 V</text>
 <text x="310" y="399" class="s">24→6 V 10 A  servos (motor rail)</text>
 <rect x="590" y="60" width="250" height="72" rx="6" fill="#ecfdf5" stroke="#047857" stroke-width="1.4"/>
 <text x="600" y="79" class="t">Antenna fin (roof)</text>
@@ -48,7 +48,7 @@
 <text x="600" y="179" class="t">Jetson Orin Nano</text>
 <text x="600" y="197" class="s">inspection brain, AI models</text>
 <text x="600" y="212" class="s">Klipper host + Moonraker, NVMe</text>
-<text x="600" y="227" class="s">USB: board, LTE modem, cameras</text>
+<text x="600" y="227" class="s">CSI: 2 frame cams · USB: board, modem</text>
 <rect x="590" y="280" width="250" height="124" rx="6" fill="#eff6ff" stroke="#374151" stroke-width="1.4"/>
 <text x="600" y="299" class="t">BTT Octopus (Klipper MCU)</text>
 <text x="600" y="317" class="s">MOTOR0-3 step/dir → DM542 ×4</text>
@@ -62,8 +62,8 @@
 <text x="600" y="484" class="s">HX711 ×2, BME280 ×2, DS18B20</text>
 <text x="600" y="499" class="s">relays: Jetson power, K1 watchdog</text>
 <rect x="590" y="552" width="250" height="60" rx="6" fill="#f0fdf4" stroke="#374151" stroke-width="1.4"/>
-<text x="600" y="571" class="t">Jetson Nano (old)</text>
-<text x="600" y="589" class="s">Entrance Observer · Ethernet ↔ Orin</text>
+<text x="600" y="571" class="t">Entrance Observer</text>
+<text x="600" y="589" class="s">own Pi 5 + Hailo pod · PoE+ ↔ Orin</text>
 <rect x="880" y="60" width="280" height="60" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
 <text x="890" y="79" class="t">DM542 ×4 → NEMA23 ×4</text>
 <text x="890" y="97" class="s">lift L/R, scan L/R · TR16×4 screws</text>
@@ -81,8 +81,8 @@
 <text x="890" y="367" class="t">Light &amp; heat</text>
 <text x="890" y="385" class="s">strobe · 660 nm red · PTC heater</text>
 <rect x="880" y="414" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
-<text x="890" y="433" class="t">Cameras (USB)</text>
-<text x="890" y="451" class="s">4 frame cams · varroa sump cam</text>
+<text x="890" y="433" class="t">Cameras</text>
+<text x="890" y="451" class="s">2 frame cams (CSI) · rim + varroa (USB)</text>
 <rect x="880" y="480" width="280" height="48" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.4"/>
 <text x="890" y="499" class="t">Load cells ×2 + climate</text>
 <text x="890" y="517" class="s">fork blocks · inside/outside air</text>

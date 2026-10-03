@@ -1,6 +1,6 @@
 // Builds the Robotic Beehive scene in Node and writes hive-tower.glb with the
 // inspection sequence baked in as an animation clip ("inspection").
-//   node export-glb.mjs [--boxes 3] [--inspect 1] [--out hive-tower.glb]
+//   node export-glb.mjs [--stack deep,deep,super] [--inspect 1] [--out hive-tower.glb]
 import { writeFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
@@ -24,7 +24,7 @@ const arg = (name, fallback) => {
   return i > 0 ? process.argv[i + 1] : fallback;
 };
 
-const tower = buildHiveTower({ boxes: Number(arg('boxes', 3)), inspectBox: Number(arg('inspect', 1)) });
+const tower = buildHiveTower({ stack: arg('stack', 'deep,deep,super').split(','), inspectBox: Number(arg('inspect', 1)) });
 const { root, timeline, applyState, animated } = tower;
 
 // Attach human-readable part info as glTF extras.
@@ -57,6 +57,14 @@ for (const o of animated) {
 }
 const clip = new THREE.AnimationClip('inspection', timeline.duration, tracks);
 clip.optimize();
+
+// Second clip: the service door swings 100° open and closes again.
+const door = tower.nodes.door;
+const q = (a) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), a).toArray();
+const open = -100 * Math.PI / 180;
+const doorClip = new THREE.AnimationClip('service-door', 5, [
+  new THREE.QuaternionKeyframeTrack(`${door.name}.quaternion`, [0, 1.5, 3.5, 5], [...q(0), ...q(open), ...q(open), ...q(0)]),
+]);
 applyState(timeline.stateAt(0));
 
 const scene = new THREE.Scene();
@@ -69,5 +77,5 @@ new GLTFExporter().parse(
     console.log(`wrote ${out} (${(glb.byteLength / 1024).toFixed(0)} KB, ${tracks.length} tracks, ${timeline.duration.toFixed(1)} s clip)`);
   },
   (err) => { console.error(err); process.exit(1); },
-  { binary: true, animations: [clip] },
+  { binary: true, animations: [clip, doorClip] },
 );

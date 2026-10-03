@@ -97,7 +97,7 @@ class Inspector:
         c = g.cleat(k + 1)
         self.guard()
         self.m.move({**both(SCAN, g.scan_park), **both(SHUTTLE, 0.0)}, sp.travel)
-        self.m.move(both(LIFT, c - 8), sp.travel)
+        self.m.move(both(LIFT, c - g.fork_approach), sp.travel)
         for f in FORKS:
             self.m.set_servo(f, self.cfg.servos.fork_engaged)
         self.m.move(both(LIFT, c - 1), sp.landing)
@@ -147,7 +147,7 @@ class Inspector:
         for side in SIDES:  # rolling close: left edge lands first, then right
             self._land(side, c, expected[side])
         for f in FORKS:
-            self.m.move({f"lift_{f.split('_')[1]}": c - 8}, sp.landing)
+            self.m.move({f"lift_{f.split('_')[1]}": c - g.fork_approach}, sp.landing)
             self.m.set_servo(f, self.cfg.servos.fork_stowed)
         self.park()
         return warnings
@@ -195,7 +195,7 @@ class Inspector:
         zs = sorted(self.locate_frames(k))
         if not zs:
             return
-        back_space = zs[0] - g.frame_pitch / 2 + g.box_inner_d / 2
+        back_space = zs[0] - g.hive_z - g.frame_pitch / 2 + g.box_inner_d / 2
         push = -1 if back_space > g.gap_width / 2 else 1  # toward the working gap
         order = range(len(zs)) if push < 0 else range(len(zs) - 1, -1, -1)
         e = g.engage(k)
@@ -223,7 +223,7 @@ class Inspector:
         self.m.move(both(SHUTTLE, z - push * g.slot_engaged + push * sp.frame_nudge), sp.shuttle_fine)
         for s in SCAN:  # peel the ear propolis one end at a time
             self.m.move({s: e + 2}, sp.frame_peel)
-        self.m.move(both(SCAN, e + g.frame_lift), sp.frame_up)
+        self.m.move(both(SCAN, e + g.frame_lift(k)), sp.frame_up)  # comb centre level with the cameras
         # Same photo spot for every frame: centred between the cameras, so
         # distance, focus and mm-per-pixel never change.
         self.m.move(both(SHUTTLE, g.photo_z - push * g.slot_engaged), sp.shuttle)

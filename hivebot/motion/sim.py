@@ -69,6 +69,15 @@ class SimBackend(MotionBackend):
             return None
         return e - 1
 
+    def camera_offset(self) -> float:
+        """Hooked frame's comb centre minus the camera axis height (mm)."""
+        k = self.open_box()
+        g = self.g
+        dy = (self.pos["scan_left"] + self.pos["scan_right"]) / 2 - g.engage(k)
+        centre = g.rim(k) - g.frame_top_below_rim + dy - g.frame_height(k) / 2
+        camera = (self.pos["lift_left"] + self.pos["lift_right"]) / 2 - g.cam_drop
+        return centre - camera
+
     def _is_open(self, k: int) -> bool:
         return self.open_box() == k and min(self.lifted(s) for s in SIDES) >= self.g.gap - 1
 
@@ -289,10 +298,10 @@ class SimBackend(MotionBackend):
         stack_bottom = min(self.lifted(s) for s in SIDES)  # above rim
         if dy1 - g.frame_top_below_rim > stack_bottom - g.bee_clearance + EPS:
             self._fail(f"frame {i} would be lifted into bees under the raised stack")
-        inside = dy1 < g.frame_h + g.frame_top_below_rim + 5
+        inside = dy1 < g.frame_height(k) + g.frame_top_below_rim + 5
         if inside and abs(z1 - z0) > EPS:
             half = g.box_inner_d / 2 - g.frame_pitch / 2
-            if not -half - EPS <= z1 <= half + EPS:
+            if not g.hive_z - half - EPS <= z1 <= g.hive_z + half + EPS:
                 self._fail(f"frame {i} pushed into the box wall")
             for j, zj in enumerate(self.frames[k]):
                 if j != i and abs(z1 - zj) < g.frame_pitch - 0.5:

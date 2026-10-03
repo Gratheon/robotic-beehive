@@ -8,25 +8,43 @@
 //       Z = front(+)/back(-) (frames are stacked along Z, entrance faces +Z)
 
 import * as THREE from 'three';
+import { buildObserver, DEFAULTS as OBSERVER_DEFAULTS, PARTS as OBSERVER_PARTS } from './vendor/observer-model.js';
 
 const MM = 0.001;
-// Frame cameras (see scan beams): x offset of each half-face camera, z of the
-// camera plane, and height relative to the hook plate (10 mm below comb centre).
-const CAM_X = 90, CAM_Z = 265, CAM_Y = -150;
-const ENT_X0 = 120, ENT_X1 = 240; // entrance tunnels, mirrored left/right
+// Frame cameras (see lift beams): one per face, CAM_Z in front of and behind
+// the photo spot.
+const CAM_Z = 265;
+// One 300 × 15 mm entrance at the top of the bottom board, as the Entrance
+// Observer porch expects. Front cladding: 8 mm backer + 18 mm slats.
+const ENTRANCE = 300, CLAD = 26;
 
 export const DEFAULTS = {
-  boxes: 3, // hive bodies in the stack
+  // Hive bodies from the bottom up. Deep boxes hold the brood nest; shallow
+  // supers ("magazines") hold honey. Any mix works: every box has the same
+  // cleats and pins, and the robot looks up each box's height here.
+  stack: ['deep', 'deep', 'super'],
+  boxTypes: {
+    deep: { h: 285, frame: 279 },
+    super: { h: 170, frame: 164 },
+  },
   inspectBox: 1, // 0 = bottom box
-  box: { w: 506, d: 450, h: 285, wall: 25 }, // Estonian hive body (outer)
-  frame: { topBar: 448, width: 410, height: 279, count: 10, pitch: 37.5, pinX: 200 },
-  plinth: 200, // cabinet base, holds PSU / battery / Jetson Nano
+  box: { w: 506, d: 450, wall: 25 }, // Estonian hive body (outer)
+  frame: { topBar: 448, width: 410, count: 10, pitch: 37.5, pinX: 200 },
+  plinth: 200, // cabinet base, holds PSU / battery / PoE supply
   bottomBoard: 150, // screened floor + varroa sump camera
   lid: 80, // insulated inner cover
   cleatUnderside: 25, // cleat lifting face, measured from box bottom
   gap: 400, // how far the upper stack is raised to open a box
-  frameLift: 300, // how far a frame is raised above its rest position
+  // The frame cameras hang from the lift beams, so during scanning they sit a
+  // fixed height above the open box's rim whatever the box. Each frame is lifted
+  // until its centre is level with them. 150–165 mm works for deep frames: the
+  // frame must clear the rim and the scan beam must stay 119 mm under the lift beam.
+  camRim: 160,
   post: { x: 372, z: 302 }, // 22 mm extrusion corner posts (centre)
+  // The hive sits 45 mm toward the front of the cabinet, so the bees' tunnel
+  // through the front wall is short; the front camera still clears it by 10 mm.
+  hiveZ: 45,
+  photoZ: 29, // frames are photographed here, centred between the cameras
   crown: 180, // electronics + motor bay on top
 };
 
@@ -35,7 +53,7 @@ export const DEFAULTS = {
 // ---------------------------------------------------------------------------
 export const PARTS = {
   post: ['Corner post', '22 mm aluminium extrusion, 4 corners. Each post carries a linear rail on its inner face for the lift beam and scan beam carriages.'],
-  plinth: ['Plinth', 'Base of the cabinet, about 200 mm high. Holds the 24 V PSU, the optional LiFePO4 battery, the MPPT charger and the Jetson Nano entrance-observer computer. Stands on levelling feet over a gravel pad.'],
+  plinth: ['Plinth', 'Base of the cabinet, about 200 mm high. Holds the 24 V PSU, the optional LiFePO4 battery, the MPPT charger and the PoE+ supply for the Entrance Observer. Stands on levelling feet over a gravel pad.'],
   feet: ['Levelling feet', 'M12 stainless feet with rubber pads. They decouple the cabinet from the ground and let you level the stack so frames hang plumb.'],
   crown: ['Crown bay', 'Dry service bay on top of the cabinet. Lift motors hang the lead screws from here, so the screws work in tension and cannot buckle. All electronics sit here too, with short antenna runs.'],
   liftBeam: ['Lift beam (×2)', 'Left and right beams on independent NEMA23 + TR16×4 lead screws. The screws are self-locking, so a power loss never drops the stack. Running the two sides at different heights lets the robot peel a propolis-glued box apart one edge at a time.'],
@@ -46,34 +64,31 @@ export const PARTS = {
   shuttle: ['Frame shuttle', 'Runs front/back along the scan beam on a GT2 belt. It carries the hook and an inductive sensor that finds the steel frame pins.'],
   belt: ['Shuttle drive', 'NEMA17 + GT2 belt, TMC2209 in StealthChop mode, so it is nearly silent. Bees feel substrate vibration strongly.'],
   hook: ['Frame hook', 'A servo swings an L-shaped hook over the box wall. The slotted tip slides sideways under the frame pin, so it never presses down onto bees. Once the frame hangs, the pin head drops into a 1.5 mm pocket, so the frame can be carried in either direction.'],
-  camera: ['Frame camera (×4)', '12 MP, portrait, in front of and behind the box, 240 mm from the comb and looking straight at it. Two cameras per face, each covering one half, so the worst corner is about 35° off-axis and most cells are seen almost straight down their length: eggs and young larvae are visible. They ride on the scan beams, outside the box footprint, and every frame is carried to the same photo spot, so distance, focus and scale are identical for every photo.'],
+  camera: ['Frame camera (×2)', 'One 12 MP camera per face (IMX477 class, 3.6 mm low-distortion M12 lens, about 83° × 67°), 240 mm from the comb and looking straight at it, plugged straight into the Orin Nano’s two CSI ports. They hang from the lift beams, not from the frame carrier: while a box is open the lift beams stand still 425 mm above its rim, whatever the box, so the cameras are always 160 mm above the rim and the scan beam lifts each frame until its comb centre is level with them. Deep brood frames and shallow super frames are both centred. Every frame is photographed at the same photo spot, so focus and mm per pixel never change (about 9.5 px/mm: a cell is ~50 px, an egg ~14 px). The middle of the comb is seen almost straight down the cells; the corners at up to ~46°, which shows larvae and capping but not eggs at the very bottom of a cell.'],
   rimCam: ['Rim camera (×2)', 'Small camera under each lift beam, looking down at the box rim. Before closing, it counts bees on the contact edges and looks for burr comb across the seam.'],
   strobe: ['Ring strobe', 'White LED ring around each lens, flashed only during the exposure. A polariser on the ring and a crossed one on the lens remove glare from wet nectar and capped honey, so the camera sees into the cells.'],
   redLight: ['Red work light', 'Bees barely see light above ~620 nm, so the cabinet interior is lit deep red during the whole inspection.'],
   leadScrew: ['Lead screw', 'TR16×4 trapezoidal lead screw, self-locking (lead angle ≈4.5°). It is hung from a thrust bearing in the crown. Dry PTFE lubrication, no grease to trap debris or bees.'],
   nema23: ['NEMA23 lift motor', 'Driven by a DM542 driver. Four of them: two lift beams and two scan beams. Lifting 80 kg of upper boxes needs ≈0.8 N·m per side with TR16×4.'],
   nema17: ['NEMA17 motor', 'Drives a shuttle belt. TMC2209 driver on the motion board. StallGuard detects jams.'],
-  box: ['Hive body', 'A standard wooden hive body. Only change needed: two cleats and steel frame pins. Nothing robotic lives inside the bee space.'],
+  box: ['Hive body', 'A standard wooden hive body: deep boxes (285 mm) for the brood nest, shallow supers (170 mm) for honey, in any order. Only change needed: two cleats and steel frame pins. The robot knows each box’s height from the stack settings. Nothing robotic lives inside the bee space.'],
   lid: ['Insulated inner cover', 'Wood-fibre insulated lid with cleats. The cabinet roof handles rain, so the hive lid stays light.'],
-  frame: ['Frame', 'Estonian frame, 448 mm top bar. Frames are kept vertical at all times: warm, heavy comb breaks if it is tilted.'],
-  comb: ['Comb', 'Capped brood in the centre, honey arc on top. This is what the cameras capture on every inspection.'],
+  frame: ['Frame', 'Estonian frame, 448 mm top bar: 279 mm deep in brood boxes, 164 mm in supers. Frames are kept vertical at all times: warm, heavy comb breaks if it is tilted.'],
+  comb: ['Comb', 'Brood frames: capped brood in the centre, honey arc on top. Super frames: capped honey. This is what the cameras capture on every inspection.'],
   pin: ['Robot frame pin', 'A stainless M5 shoulder screw on each ear of the top bar (≈0.20 € per frame). The hook grips it. The inductive sensor locates each frame to ±0.5 mm.'],
   tag: ['Frame ID tag', 'ArUco marker on the end bar. The frame keeps its identity when it moves between boxes, so the web app can track each frame side over time.'],
   bottomBoard: ['Varroa sump', 'Tall screened bottom board. Mites fall through the mesh onto a white tray. A corner camera counts them every day. No moving parts.'],
   varroaCam: ['Varroa camera', 'Wide-angle camera with a ring light inside the sump, looking across the white tray.'],
-  entrance: ['Entrance tunnels', 'Two 120 mm tunnels carry the entrance through the cabinet wall to one landing board. They leave the middle free for the front cameras to pass, and the flight path stays clear of all machinery.'],
-  reducer: ['Entrance reducer', 'Servo-driven slide. It narrows the entrance against robbing, hornets or wind, or closes it before transport.'],
-  observer: ['Entrance Observer', 'Gratheon entrance camera (runs on the old Jetson Nano). It counts bees in and out and flags hornets and robbing.'],
   cladding: ['Cladding', 'Vertical thermo-treated pine boards. They are weatherproof without chemical preservatives, which can harm bees. Backed by wood-fibre insulation.'],
   plinthClad: ['Charred-wood skirt', 'Yakisugi (charred) boards resist rot and splashing at ground level without any chemicals.'],
-  door: ['Service door', 'Full-height front door. Opening it cuts motor power (interlock), and the forks can then be folded away so the hive can be worked by hand.'],
-  window: ['Viewing window', 'A polycarbonate slot for visitors. A wooden shutter keeps it dark between inspections.'],
+  door: ['Service door', 'Full-height door at the back, away from the entrance, so opening it never puts the beekeeper in the bees’ flight path. It swings out on three hinges (tick “Open service door” to see it). Opening it cuts motor power (interlock), and the forks can then be folded away so the hive can be worked by hand.'],
+  window: ['Viewing window', '600 × 380 mm polycarbonate window in the service door at the height where frames are photographed, so visitors can watch an inspection. A wooden shutter keeps the cabinet dark between inspections.'],
   roof: ['Roof', 'Ventilated double roof with 60 mm overhang and drip edges. The air gap keeps summer heat off the hive.'],
   solar: ['Solar panel', 'About 100 W, south-facing. With the always-on ESP32 at ~0.2 W and the Jetson woken only for inspections, the tower runs off-grid most of the year.'],
   antenna: ['Antenna fin', 'RF-transparent ASA fin on the roof ridge with the LTE, LoRa 868 MHz, Wi-Fi and GNSS antennas. Surge arrestors sit where the cables enter the crown.'],
   vent: ['Hex vent band', 'Hexagon ventilation slots in bronze-anodised aluminium, backed by insect mesh. Crown heat leaves here and does not heat the hive.'],
-  estop: ['Emergency stop', 'Latching mushroom switch on the side. It cuts 24 V motor power only; the computers keep running and log the event.'],
-  status: ['Status light', 'Honey-yellow ring. Slow pulse = idle, solid = inspecting, red = needs attention.'],
+  estop: ['Emergency stop', 'Latching mushroom switch on the fixed stile at the back, right next to the door handle, so it can be hit without opening anything. Opening the door already stops the motors (interlock), so the stop button is for when something goes wrong with the door closed. It cuts 24 V motor power only; the computers keep running and log the event.'],
+  status: ['Status display', 'E-paper panel on the service door (black, white and red), readable in full sun and powered only when it changes. It shows what the last inspection found: queen seen, frames with eggs and brood, varroa level and trend, honey flow and weight, inside climate, and the next planned visit. Red marks what needs attention. The light bar under it is the robot state: slow yellow pulse = idle, solid yellow = inspecting (do not open the door), red = needs attention.'],
   jetson: ['Jetson Orin Nano', 'Runs inspections, cameras and detection models (bees, queen, varroa, brood). It sends sequences to Klipper over the Moonraker API.'],
   mcu: ['Motion board', 'BTT Octopus-class board running Klipper firmware. It generates step pulses in real time (not Python on the GPIO), handles endstops, servos, fans and the heater.'],
   dm542: ['DM542 drivers', 'External drivers for the four NEMA23 motors. Step/dir signals come from the motion board.'],
@@ -82,7 +97,7 @@ export const PARTS = {
   lora: ['ESP32 + LoRa', 'Always-on supervisor, about 0.2 W. It reads temperature, humidity and weight, sends LoRa telemetry, wakes the Jetson via a relay and runs the watchdog.'],
   psu: ['24 V PSU', 'Mean Well 24 V ~ 350 W in a sealed box. The motor rail goes through the E-stop and the door interlock.'],
   battery: ['LiFePO4 battery', 'Optional 24 V / 20 Ah pack for solar or off-grid use. Sits low for stability.'],
-  nano: ['Jetson Nano', 'The older Jetson Nano, reused as the Entrance Observer computer.'],
+  poe: ['PoE+ supply', '24 V to 48 V PoE+ injector (30 W) for the Entrance Observer. One cable carries power and data through the front corner post to the Observer; its own Raspberry Pi 5 + Hailo pod does the bee counting.'],
   heater: ['Cabinet heater', '24 V PTC fan heater. It pre-warms the cabinet air to about 25 °C before a cold-day inspection, so open brood does not chill.'],
   bee: ['Honey bee', 'The client.'],
 };
@@ -90,14 +105,21 @@ export const PARTS = {
 // ---------------------------------------------------------------------------
 // Derived geometry
 // ---------------------------------------------------------------------------
+// Entrance Observer parts, namespaced so they do not clash with ours.
+for (const [k, v] of Object.entries(OBSERVER_PARTS)) PARTS[`eo:${k}`] = [`Entrance Observer · ${v[0]}`, v[1]];
+
 export function derive(p) {
-  const n = p.boxes;
+  const types = p.stack.map((t) => p.boxTypes[t] || p.boxTypes.deep);
+  const n = types.length;
   const k = Math.min(p.inspectBox, n - 1);
-  const h = p.box.h;
+  const boxH = (i) => types[i].h;
+  const frameH = (i) => types[i].frame;
   const base = p.plinth + p.bottomBoard;
-  const boxBottom = (i) => base + i * h; // i === n → lid
+  const boxBottom = (i) => base + types.slice(0, i).reduce((a, t) => a + t.h, 0); // i === n → lid
   const cleatY = (i) => boxBottom(i) + p.cleatUnderside;
-  const rim = boxBottom(k) + h;
+  const rim = boxBottom(k) + boxH(k);
+  // Lift that puts the comb centre (half a frame under the top bar) level with the cameras.
+  const frameLiftOf = (i) => p.camRim + 2 + frameH(i) / 2;
   const frameTop = (rimY) => rimY - 2; // top bar sits 2 mm below the rim
   const engage = frameTop(rim) + 1.25; // hook plate sits on the pin neck
   const liftMax = cleatY(n) + p.gap; // worst case: lifting only the lid
@@ -109,12 +131,16 @@ export function derive(p) {
   for (let i = 0; i < f.count; i++) frameZ.push(-inner / 2 + 25 + f.pitch / 2 + i * f.pitch);
   const gapWidth = inner - f.count * f.pitch;
   return {
-    n, k, h, base, boxBottom, cleatY, rim, engage, liftMax, postTop, frameZ, gapWidth,
+    n, k, types, boxH, frameH, frameLiftOf, frameLift: frameLiftOf(k), base, boxBottom, hiveZ: p.hiveZ, photoZ: p.photoZ, cleatY, rim, engage, liftMax, postTop, frameZ, gapWidth,
     frameTop: frameTop(rim),
+    camY: rim + p.camRim, // camera axis while scanning
+    camDrop: p.cleatUnderside + p.gap - p.camRim, // camera axis below the lift beam's fork line
     crownTop: postTop + p.crown,
     stackTop: boxBottom(n) + p.lid,
-    liftPark: base + 250,
-    scanPark: p.plinth + 220,
+    // Lift beams never go below base + 304 (scan park + 119 mm): the frame
+    // cameras hanging 265 mm under them then clear the Entrance Observer porch.
+    liftPark: base + 350,
+    scanPark: base + 185,
   };
 }
 
@@ -150,12 +176,58 @@ function makeMaterials() {
     fin: std(0xd8d6cf, { roughness: 0.5 }),
     ledWhite: std(0xffffff, { emissive: 0xffffff, emissiveIntensity: 2.5 }),
     ledRed: std(0x550000, { emissive: 0xff1a0a, emissiveIntensity: 2.0 }),
+    epaper: std(0xdcded6, { roughness: 0.9 }),
+    epaperInk: std(0x2b2f2c, { roughness: 0.9 }),
     ledYellow: std(0x6a4a00, { emissive: 0xffc21a, emissiveIntensity: 1.6 }),
     beam: new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.12, depthWrite: false }),
     beeBody: std(0x2a1d0e, { roughness: 0.6 }),
     beeStripe: std(0xe3a824, { roughness: 0.6 }),
     beeWing: std(0xe8f2f7, { roughness: 0.2, transparent: true, opacity: 0.45 }),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Status display: what the last inspection found, drawn like a 3-colour
+// (black / white / red) e-paper panel. Needs a DOM canvas, so it only exists in
+// the browser viewer; the GLB export falls back to plain text bars.
+// ---------------------------------------------------------------------------
+function statusTexture() {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = 960;
+  c.height = 560;
+  const g = c.getContext('2d');
+  const ink = '#1f2224', red = '#b3261e', font = (w, px) => `${w} ${px}px "IBM Plex Sans", "Segoe UI", system-ui, sans-serif`;
+  g.fillStyle = '#dcded6';
+  g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = ink;
+  g.font = font(700, 46);
+  g.fillText('Box 2 inspected · 10 frames', 36, 66);
+  g.font = font(400, 30);
+  g.fillText('today 11:40 · next visit Tue 11:00', 36, 110);
+  g.fillRect(36, 134, 888, 3);
+  const rows = [
+    ['Queen', 'seen on frame 5', true],
+    ['Eggs', 'on 4 frames', true],
+    ['Brood', '6 frames · 72 % capped', true],
+    ['Varroa', '1.2 % · up 0.4 in a week', false],
+    ['Honey', '+1.8 kg / day · 38.4 kg', true],
+    ['Inside', '34.6 °C · 62 % humidity', true],
+  ];
+  rows.forEach(([label, value, ok], i) => {
+    const y = 196 + i * 62;
+    g.fillStyle = ok ? ink : red;
+    g.font = font(700, 36);
+    g.fillText(label, 36, y);
+    g.font = font(400, 36);
+    g.fillText(value, 230, y);
+    g.font = font(700, 36);
+    g.fillText(ok ? '✓' : '!', 890, y);
+  });
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
 }
 
 // ---------------------------------------------------------------------------
@@ -201,10 +273,11 @@ function helpers() {
 // ---------------------------------------------------------------------------
 export function buildHiveTower(options = {}) {
   const p = { ...DEFAULTS, ...options, box: { ...DEFAULTS.box, ...(options.box || {}) }, frame: { ...DEFAULTS.frame, ...(options.frame || {}) } };
+  if (!options.stack && options.boxes) p.stack = Array.from({ length: options.boxes }, () => 'deep');
   const d = derive(p);
   const M = makeMaterials();
   const { box, cyl, group, place, cached } = helpers();
-  const W = p.box.w, D = p.box.d, H = p.box.h, T = p.box.wall;
+  const W = p.box.w, D = p.box.d, T = p.box.wall;
   const PX = p.post.x, PZ = p.post.z;
   const E = 22; // extrusion size
 
@@ -229,7 +302,7 @@ export function buildHiveTower(options = {}) {
   ring(d.crownTop - 11, 'crown');
   // hive deck cross members + rubber pads
   for (const z of [-150, 150]) box(structure, 2 * PX, E, E, M.alu, 0, p.plinth - 11, z, 'plinth');
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(structure, 40, 6, 40, M.rubber, sx * 200, p.plinth + 3, sz * 150, 'feet');
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(structure, 40, 6, 40, M.rubber, sx * 200, p.plinth + 3, p.hiveZ + sz * 150, 'feet');
   // motor plate in the crown
   box(structure, 2 * PX + E, 6, 2 * PZ + E, M.alu, 0, d.postTop + 3, 0, 'crown');
   // levelling feet
@@ -240,7 +313,7 @@ export function buildHiveTower(options = {}) {
   }
 
   // ----- hive stack --------------------------------------------------------
-  const hive = group(root, 'hive');
+  const hive = group(root, 'hive', 0, 0, p.hiveZ);
   nodes.hive = hive;
   const boxMaterials = [];
 
@@ -255,32 +328,35 @@ export function buildHiveTower(options = {}) {
   box(bb, W, 12, D, bbMat, 0, 6, 0, 'bottomBoard');
   // front wall with a 300 × 15 entrance slot at the top
   box(bb, W, bbH - 15, T, bbMat, 0, (bbH - 15) / 2, D / 2 - T / 2, 'bottomBoard');
-  box(bb, 2 * ENT_X0, 15, T, bbMat, 0, bbH - 7.5, D / 2 - T / 2, 'bottomBoard');
-  for (const sx of [-1, 1]) box(bb, W / 2 - ENT_X1, 15, T, bbMat, sx * (W / 2 + ENT_X1) / 2, bbH - 7.5, D / 2 - T / 2, 'bottomBoard');
+  for (const sx of [-1, 1]) box(bb, (W - ENTRANCE) / 2, 15, T, bbMat, sx * (W + ENTRANCE) / 4, bbH - 7.5, D / 2 - T / 2, 'bottomBoard');
   box(bb, W - 2 * T, 2, D - 2 * T, M.mesh, 0, bbH - 18, 0, 'bottomBoard');
   box(bb, W - 2 * T - 10, 3, D - 2 * T - 10, M.white, 0, 16, 0, 'bottomBoard');
   const vcam = group(bb, 'varroaCam', -W / 2 + T + 25, 60, -D / 2 + T + 25, 'varroaCam');
   box(vcam, 30, 30, 30, M.black, 0, 0, 0, 'varroaCam');
   cyl(vcam, 8, 6, M.ledWhite, 12, -6, 12, 'y', 'varroaCam');
 
-  // Two entrance tunnels (x 120..240 each side) leave the middle free for the
-  // front cameras' path. One landing board, one Entrance Observer above it.
-  const ent = group(root, 'entrance', 0, p.plinth + bbH - 15, 0);
-  const tunnelLen = PZ + 40 - D / 2;
-  const tz = D / 2 + tunnelLen / 2;
-  for (const sx of [-1, 1]) {
-    const ex = sx * (ENT_X0 + ENT_X1) / 2, ew = ENT_X1 - ENT_X0;
-    box(ent, ew + 8, 4, tunnelLen, M.woodBox[3], ex, -2, tz, 'entrance');
-    box(ent, ew + 8, 4, tunnelLen, M.woodBox[3], ex, 17, tz, 'entrance');
-    box(ent, 4, 15, tunnelLen, M.woodBox[3], sx * (ENT_X0 - 2), 7.5, tz, 'entrance');
-    box(ent, 4, 15, tunnelLen, M.woodBox[3], sx * (ENT_X1 + 2), 7.5, tz, 'entrance');
-    box(ent, 60, 4, 10, M.yellow, ex + sx * 25, 28, PZ + 38, 'reducer');
+  // Entrance Observer (vendored from entrance-observer/3d-model). In its
+  // 'robot' context its porch is the entrance tunnel through the cabinet front,
+  // its wall frame bolts to the cladding and its cable runs to a corner post.
+  // Only the Observer itself is taken; it also builds its own ghost hive and cabinet.
+  // It finds the hive front from the hive depth, so a deeper hive = our hive
+  // shifted forward by hiveZ. Its frame sits 2 mm proud of the slats.
+  const eo = buildObserver({
+    context: 'robot', boxes: d.n,
+    hive: { ...OBSERVER_DEFAULTS.hive, d: D + 2 * p.hiveZ },
+    robot: { plinth: p.plinth, bottomBoard: p.bottomBoard, post: p.post, e: E, clad: CLAD + 2 },
+  });
+  const observer = group(root, 'entranceObserver');
+  for (const g of [eo.nodes.observer, eo.nodes.fieldCables]) observer.add(g);
+  // Its bees on the hive wall would sit inside our cabinet: keep only those outside.
+  for (const b of eo.nodes.bees || []) {
+    const wp = new THREE.Vector3();
+    b.getWorldPosition(wp);
+    if (wp.z * 1000 < PZ + 11 + CLAD) b.visible = false;
   }
-  box(ent, 2 * ENT_X1 + 40, 10, 90, M.woodBox[3], 0, -9, PZ + 32 + 45, 'entrance');
-  const obs = group(ent, 'observer', 0, 80, PZ + 70, 'observer');
-  box(obs, 180, 70, 70, M.black, 0, 0, 0, 'observer');
-  box(obs, 200, 6, 90, M.black, 0, 38, 8, 'observer');
-  cyl(obs, 12, 10, M.glass, 0, -38, 10, 'y', 'observer');
+  // Observer part names overlap ours (camera, frame, board…): namespace them.
+  observer.traverse((o) => { if (o.userData.part && !o.userData.part.startsWith('eo:')) o.userData.part = `eo:${o.userData.part}`; });
+  nodes.observer = observer;
 
   // bees on the landing board
   const bees = group(root, 'bees');
@@ -299,25 +375,26 @@ export function buildHiveTower(options = {}) {
     return b;
   };
   const landingY = p.plinth + bbH - 15 - 4 + 4;
-  addBee(-190, landingY, PZ + 60, 0.3);
-  addBee(150, landingY, PZ + 90, -2.4);
-  addBee(210, landingY, PZ + 50, 1.9);
   addBee(-120, landingY + 140, PZ + 260, 2.8, true);
   addBee(90, landingY + 220, PZ + 420, -0.6, true);
   addBee(-10, landingY + 90, PZ + 180, 3.1, true);
 
   // one hive body (hollow walls + cleats + frames)
-  const frameParts = (parent, name) => {
+  const frameParts = (parent, name, fh, kind) => {
     const f = p.frame;
     const g = group(parent, name, 0, 0, 0, 'frame');
     box(g, f.topBar, 20, 25, M.topBar, 0, -10, 0, 'frame');
-    for (const s of [-1, 1]) box(g, 10, f.height - 30, 30, M.topBar, s * (f.width / 2 - 5), -20 - (f.height - 30) / 2, 0, 'frame');
-    box(g, f.width, 10, 20, M.topBar, 0, -f.height + 5, 0, 'frame');
-    box(g, f.width - 20, f.height - 40, 22, M.comb, 0, -20 - (f.height - 40) / 2, 0, 'comb');
-    box(g, f.width - 24, 50, 23, M.honey, 0, -50, 0, 'comb');
-    const brood = place(g, cached('brood', () => new THREE.CylinderGeometry(1, 1, 24 * MM, 32)), M.brood, 0, -f.height / 2 - 20, 0, 'comb');
-    brood.rotation.x = Math.PI / 2;
-    brood.scale.set(135 * MM, 1, 85 * MM);
+    for (const s of [-1, 1]) box(g, 10, fh - 30, 30, M.topBar, s * (f.width / 2 - 5), -20 - (fh - 30) / 2, 0, 'frame');
+    box(g, f.width, 10, 20, M.topBar, 0, -fh + 5, 0, 'frame');
+    box(g, f.width - 20, fh - 40, 22, M.comb, 0, -20 - (fh - 40) / 2, 0, 'comb');
+    if (kind === 'super') {
+      box(g, f.width - 24, fh - 48, 23, M.honey, 0, -20 - (fh - 40) / 2, 0, 'comb'); // capped honey
+    } else {
+      box(g, f.width - 24, 50, 23, M.honey, 0, -50, 0, 'comb');
+      const brood = place(g, cached('brood', () => new THREE.CylinderGeometry(1, 1, 24 * MM, 32)), M.brood, 0, -fh / 2 - 20, 0, 'comb');
+      brood.rotation.x = Math.PI / 2;
+      brood.scale.set(135 * MM, 1, 85 * MM);
+    }
     for (const s of [-1, 1]) {
       cyl(g, 2.5, 2.5, M.steel, s * f.pinX, 1.25, 0, 'y', 'pin', 12);
       cyl(g, 4.5, 2.5, M.steel, s * f.pinX, 3.75, 0, 'y', 'pin', 16);
@@ -328,6 +405,7 @@ export function buildHiveTower(options = {}) {
   };
 
   const hiveBody = (parent, name, i, x, y, z) => {
+    const H = d.boxH(i), kind = p.stack[i];
     const g = group(parent, name, x, y, z, 'box');
     const mat = M.woodBox[i % M.woodBox.length].clone();
     boxMaterials.push(mat);
@@ -338,7 +416,7 @@ export function buildHiveTower(options = {}) {
     addCleats(g, p.cleatUnderside);
     const frames = [];
     d.frameZ.forEach((fz, fi) => {
-      const fg = frameParts(g, `${name}_frame${fi}`);
+      const fg = frameParts(g, `${name}_frame${fi}`, d.frameH(i), kind);
       fg.position.set(0, (H - 2) * MM, fz * MM);
       frames.push(fg);
     });
@@ -391,23 +469,56 @@ export function buildHiveTower(options = {}) {
   };
   nodes.liftBeams = {};
   nodes.forks = {};
+  nodes.strobes = [];
   for (const s of [-1, 1]) {
     const side = s < 0 ? 'L' : 'R';
     const g = group(root, `liftBeam${side}`, 0, d.liftPark, 0, 'liftBeam');
     makeBeamBase(g, s, -30, 'liftBeam', -60);
-    cyl(g, 6, 380, M.steel, s * 305, -5, 0, 'z', 'fork');
-    for (const z of [-150, 150]) {
+    const hz = p.hiveZ;
+    cyl(g, 6, 380, M.steel, s * 305, -5, hz, 'z', 'fork');
+    for (const z of [hz - 150, hz + 150]) {
       box(g, 26, 22, 22, M.alu, s * 318, -12, z, 'fork');
       box(g, 8, 8, 40, M.steel, s * 318, -26, z, 'loadcell');
     }
-    box(g, 40, 22, 40, M.black, s * 318, -10, 205, 'fork');
-    const rc = group(g, `rimCam${side}`, s * 318, -30, -205, 'rimCam');
+    box(g, 40, 22, 40, M.black, s * 318, -10, hz + 205, 'fork');
+    const rc = group(g, `rimCam${side}`, s * 318, -30, hz - 205, 'rimCam');
     rc.rotation.z = s * 0.6;
     box(rc, 26, 20, 26, M.black, 0, 0, 0, 'rimCam');
     cyl(rc, 6, 4, M.glass, -s * 10, -8, 0, 'y', 'rimCam');
+    // Frame camera: one per face, centred, looking straight at the comb at the
+    // photo spot. The left beam carries the front camera, the right beam the
+    // back one. While a box is open the lift beams stand still at rim + 425 mm
+    // for any box, so the camera is always camRim above the open rim and the
+    // scan beam can centre each frame on it, deep or shallow. The cameras hang
+    // between box and cladding, so they never pass over the hive.
+    {
+      const cz = s < 0 ? p.photoZ + CAM_Z : p.photoZ - CAM_Z;
+      box(g, 329, 12, 12, M.alu, s * 329 / 2, -30, cz, 'camera'); // arm from the beam
+      cyl(g, 5, d.camDrop - 30, M.alu, 0, -(30 + d.camDrop) / 2, cz, 'y', 'camera', 12);
+      const cam = group(g, `camera${cz > 0 ? 'Front' : 'Back'}`, 0, -d.camDrop, cz, 'camera');
+      cam.rotation.y = cz > 0 ? Math.PI : 0; // lens faces the photo spot
+      box(cam, 44, 34, 28, M.black, 0, 0, 0, 'camera');
+      cyl(cam, 9, 8, M.glass, 0, 0, 18, 'z', 'camera');
+      const ring = place(cam, cached('ledRing', () => new THREE.TorusGeometry(15 * MM, 2.5 * MM, 8, 24)), M.ledWhite, 0, 0, 19, 'strobe');
+      // light frustum: square pyramid from the lens to the whole comb face
+      const reach = CAM_Z - 18 - 11;
+      const beamG = group(cam, `${cam.name}_light`, 0, 0, 18, 'strobe');
+      const pyr = place(beamG, cached('pyr', () => {
+        const c = new THREE.ConeGeometry(1, 1, 4, 1, true);
+        c.rotateY(Math.PI / 4);
+        c.rotateX(-Math.PI / 2);
+        c.translate(0, 0, 0.5);
+        return c;
+      }), M.beam, 0, 0, 0, 'strobe');
+      pyr.scale.set((215 / 0.7071) * MM, (150 / 0.7071) * MM, reach * MM);
+      pyr.castShadow = false;
+      pyr.receiveShadow = false;
+      ring.name = `${cam.name}_strobe`;
+      nodes.strobes.push(ring, beamG);
+    }
     const forks = [];
-    for (const z of [-120, 120]) {
-      const pivot = group(g, `fork${side}_${z > 0 ? 'F' : 'B'}`, s * 305, -5, z, 'fork');
+    for (const z of [hz - 120, hz + 120]) {
+      const pivot = group(g, `fork${side}_${z > hz ? 'F' : 'B'}`, s * 305, -5, z, 'fork');
       box(pivot, 10, 45, 20, M.yellow, 0, -22.5, 0, 'fork');
       forks.push(pivot);
     }
@@ -419,7 +530,6 @@ export function buildHiveTower(options = {}) {
   nodes.scanBeams = {};
   nodes.shuttles = {};
   nodes.hooks = {};
-  nodes.strobes = [];
   for (const s of [-1, 1]) {
     const side = s < 0 ? 'L' : 'R';
     const g = group(root, `scanBeam${side}`, 0, d.scanPark, 0, 'scanBeam');
@@ -430,7 +540,7 @@ export function buildHiveTower(options = {}) {
 
     const sh = group(g, `shuttle${side}`, 0, 0, 0, 'shuttle');
     box(sh, 22, 60, 56, M.bronze, s * 318, 34, 0, 'shuttle');
-    box(sh, 14, 14, 14, M.black, s * 312, 2, -22, 'shuttle'); // inductive sensor
+    box(sh, 14, 14, 14, M.black, s * 312, 2, 22, 'shuttle'); // inductive sensor, in front of the hook
     // hook: pivot 18 mm above the plate, arm → leg → slotted plate
     const hk = group(sh, `hook${side}`, s * 300, 18, 0, 'hook');
     box(hk, 88, 4, 16, M.yellow, -s * 44, 0, 0, 'hook');
@@ -438,33 +548,6 @@ export function buildHiveTower(options = {}) {
     // H-plate: two back-to-back slots so it can push a frame either way
     box(hk, 22, 2.5, 4, M.yellow, -s * 99, -18, 0, 'hook');
     for (const px of [94.5, 105.5]) box(hk, 5, 2.5, 36, M.yellow, -s * px, -18, 0, 'hook');
-    // Frame cameras: front and back of the box, looking straight at the comb.
-    // They sit in the space between box and cladding (|z| = CAM_Z), so they
-    // never pass over the hive; each covers one half of a face.
-    for (const cz of [-CAM_Z, CAM_Z]) {
-      box(g, 329 - CAM_X, 12, 12, M.alu, s * (CAM_X + 329) / 2, 40, cz, 'camera'); // arm from the beam
-      cyl(g, 5, 40 - CAM_Y, M.alu, s * CAM_X, (40 + CAM_Y) / 2, cz, 'y', 'camera', 12);
-      const cam = group(g, `camera${side}${cz > 0 ? 'F' : 'B'}`, s * CAM_X, CAM_Y, cz, 'camera');
-      cam.rotation.y = cz > 0 ? Math.PI : 0; // lens faces the frame at z = 0
-      box(cam, 34, 44, 36, M.black, 0, 0, 0, 'camera');
-      cyl(cam, 9, 8, M.glass, 0, 0, 22, 'z', 'camera');
-      const ring = place(cam, cached('ledRing', () => new THREE.TorusGeometry(15 * MM, 2.5 * MM, 8, 24)), M.ledWhite, 0, 0, 23, 'strobe');
-      // light frustum: square pyramid from the lens to the comb (one half face)
-      const reach = CAM_Z - 22 - 12;
-      const beamG = group(cam, `${cam.name}_light`, 0, 0, 22, 'strobe');
-      const pyr = place(beamG, cached('pyr', () => {
-        const c = new THREE.ConeGeometry(1, 1, 4, 1, true);
-        c.rotateY(Math.PI / 4);
-        c.rotateX(-Math.PI / 2);
-        c.translate(0, 0, 0.5);
-        return c;
-      }), M.beam, 0, 0, 0, 'strobe');
-      pyr.scale.set((135 / 0.7071) * MM, (165 / 0.7071) * MM, reach * MM);
-      pyr.castShadow = false;
-      pyr.receiveShadow = false;
-      ring.name = `${cam.name}_strobe`;
-      nodes.strobes.push(ring, beamG);
-    }
     nodes.scanBeams[side] = g;
     nodes.shuttles[side] = sh;
     nodes.hooks[side] = hk;
@@ -485,7 +568,7 @@ export function buildHiveTower(options = {}) {
   const base = group(root, 'plinthGear', 0, 60, 0);
   box(base, 215, 50, 115, M.alu, -150, 25, -100, 'psu');
   box(base, 260, 120, 170, M.pcbBlue, 150, 60, 50, 'battery');
-  box(base, 100, 30, 80, M.pcbGreen, -180, 15, 150, 'nano');
+  box(base, 100, 30, 80, M.pcbGreen, -180, 15, 150, 'poe');
 
   // ----- cladding, crown shell, roof --------------------------------------
   const clad = group(root, 'cladding');
@@ -505,30 +588,57 @@ export function buildHiveTower(options = {}) {
     box(clad, 8, bodyH, 2 * OZ, M.backer, s * (OX + 4), cy, 0, 'cladding');
     slatRun(2 * OZ + 30, (z, i) => box(clad, 18, bodyH, slatW, i % 2 ? M.slatAlt : M.slat, s * (OX + 17), cy, z, 'cladding'));
   }
-  box(clad, 2 * OX + 16, bodyH, 8, M.backer, 0, cy, -(OZ + 4), 'cladding');
-  slatRun(2 * OX + 52, (x, i) => box(clad, slatW, bodyH, 18, i % 2 ? M.slatAlt : M.slat, x, cy, -(OZ + 17), 'cladding'));
-  // front door with viewing window and entrance cut-out
-  const door = group(clad, 'door', 0, 0, 0, 'door');
-  const win = { x0: -70, x1: 70, y0: 1000, y1: 1450 };
-  const entTop = p.plinth + bbH + 20;
-  box(door, 2 * OX + 16, top - entTop, 8, M.backer, 0, (top + entTop) / 2, OZ + 4, 'door');
+  // Front: plain wall. The Entrance Observer porch passes through an opening
+  // above the plinth, and its wall frame is bolted over the slats.
+  const porchHalf = 166, porchBot = p.plinth + bbH - 22, porchTop = p.plinth + bbH + 10;
+  box(clad, 2 * OX + 16, top - porchTop, 8, M.backer, 0, (top + porchTop) / 2, OZ + 4, 'cladding');
+  box(clad, 2 * OX + 16, porchBot - p.plinth, 8, M.backer, 0, (porchBot + p.plinth) / 2, OZ + 4, 'cladding');
+  for (const sx of [-1, 1]) box(clad, OX + 8 - porchHalf, porchTop - porchBot, 8, M.backer, sx * (OX + 8 + porchHalf) / 2, (porchTop + porchBot) / 2, OZ + 4, 'cladding');
   slatRun(2 * OX + 52, (x, i) => {
     const mat = i % 2 ? M.slatAlt : M.slat;
-    const crossesWin = x + slatW / 2 > win.x0 && x - slatW / 2 < win.x1;
-    const crossesEnt = Math.abs(x) + slatW / 2 > ENT_X0 - 10 && Math.abs(x) - slatW / 2 < ENT_X1 + 10;
-    const y0 = crossesEnt ? entTop : p.plinth;
-    const segs = crossesWin ? [[y0, win.y0], [win.y1, top]] : [[y0, top]];
-    for (const [a, b] of segs) box(door, slatW, b - a, 18, mat, x, (a + b) / 2, OZ + 17, 'door');
+    const cut = Math.abs(x) - slatW / 2 < porchHalf;
+    for (const [a, b] of cut ? [[p.plinth, porchBot], [porchTop, top]] : [[p.plinth, top]]) box(clad, slatW, b - a, 18, mat, x, (a + b) / 2, OZ + 17, 'cladding');
   });
-  box(door, win.x1 - win.x0 + 60, win.y1 - win.y0, 6, M.glass, 0, (win.y0 + win.y1) / 2, OZ + 22, 'window');
-  box(door, win.x1 - win.x0 + 60, 12, 26, M.bronze, 0, win.y0 - 6, OZ + 17, 'window');
-  box(door, win.x1 - win.x0 + 60, 12, 26, M.bronze, 0, win.y1 + 6, OZ + 17, 'window');
-  box(door, 16, 220, 22, M.bronze, 2 * OX / 2 - 30, 1150, OZ + 34, 'door'); // handle
-  const status = place(door, cached('ring', () => new THREE.TorusGeometry(24 * MM, 4 * MM, 12, 40)), M.ledYellow, 0, top - 90, OZ + 28, 'status');
-  nodes.status = status;
-  // e-stop on the right side
-  box(clad, 20, 90, 90, M.yellow, OX + 36, 1250, 180, 'estop');
-  cyl(clad, 22, 24, M.red, OX + 58, 1250, 180, 'x', 'estop', 24);
+  // Back: a fixed stile with the emergency stop, and a full-height service door
+  // hinged on the far edge, away from the bees' flight path. The door carries a
+  // wide viewing window at the height where frames are photographed and a
+  // status display. nodes.door swings open about its hinge (viewer toggle).
+  const HX = OX + 8, BZ = OZ + 26, STILE = -333; // hinge x, back face, stile edge
+  box(clad, STILE + HX, bodyH, 8, M.backer, (STILE - HX) / 2, cy, -(OZ + 4), 'cladding');
+  const door = group(clad, 'serviceDoor', HX, 0, -BZ, 'door');
+  nodes.door = door;
+  const dbox = (sx, sy, sz, mat, x, y, z, part) => box(door, sx, sy, sz, mat, x - HX, y, z + BZ, part);
+  dbox(HX - STILE, bodyH, 8, M.backer, (HX + STILE) / 2, cy, -(OZ + 4), 'door');
+  const win = { x0: -271, x1: 329, y0: 880, y1: 1260 }; // 600 × 380 mm
+  slatRun(2 * OX + 52, (x, i) => {
+    const mat = i % 2 ? M.slatAlt : M.slat;
+    if (x < STILE) { box(clad, slatW, bodyH, 18, mat, x, cy, -(OZ + 17), 'cladding'); return; }
+    const crossesWin = x + slatW / 2 > win.x0 && x - slatW / 2 < win.x1;
+    const segs = crossesWin ? [[p.plinth, win.y0], [win.y1, top]] : [[p.plinth, top]];
+    for (const [a, b] of segs) dbox(slatW, b - a, 18, mat, x, (a + b) / 2, -(OZ + 17), 'door');
+  });
+  const winW = win.x1 - win.x0, winH = win.y1 - win.y0, winX = (win.x0 + win.x1) / 2;
+  dbox(winW + 20, winH + 20, 6, M.glass, winX, (win.y0 + win.y1) / 2, -(OZ + 22), 'window');
+  for (const y of [win.y0 - 6, win.y1 + 6]) dbox(winW + 24, 12, 26, M.bronze, winX, y, -(OZ + 17), 'window');
+  for (const x of [win.x0 - 6, win.x1 + 6]) dbox(12, winH + 24, 26, M.bronze, x, (win.y0 + win.y1) / 2, -(OZ + 17), 'window');
+  dbox(16, 220, 22, M.bronze, STILE + 40, 1150, -(OZ + 34), 'door'); // handle
+  for (const y of [420, 1050, 1640]) cyl(door, 7, 90, M.steel, 0, y, 0, 'y', 'door', 12); // hinges
+  // status display: e-paper screen in a graphite bezel, light bar under it
+  const dispY = 1420;
+  dbox(270, 176, 10, M.black, winX, dispY, -(OZ + 31), 'status');
+  const tex = statusTexture();
+  if (tex) {
+    const screen = dbox(240, 140, 2, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }), winX, dispY + 8, -(OZ + 37), 'status');
+    screen.rotation.y = Math.PI; // faces out of the back
+  } else {
+    dbox(240, 140, 2, M.epaper, winX, dispY + 8, -(OZ + 37), 'status');
+    for (const [w, y] of [[140, 52], [200, 30], [170, 12], [110, -6], [180, -24], [130, -42]]) dbox(w, 7, 1, M.epaperInk, winX + 110 - w / 2 - 10, dispY + y, -(OZ + 38.5), 'status');
+  }
+  nodes.status = dbox(220, 6, 3, M.ledYellow, winX, dispY - 76, -(OZ + 37), 'status');
+  // emergency stop on the fixed stile, next to the handle: reachable without
+  // opening anything (opening the door already stops the motors)
+  box(clad, 58, 90, 16, M.yellow, (STILE - HX) / 2, 1260, -(BZ + 8), 'estop');
+  cyl(clad, 21, 22, M.red, (STILE - HX) / 2, 1260, -(BZ + 26), 'z', 'estop', 24);
   // plinth skirt (charred wood)
   for (const s of [-1, 1]) {
     box(clad, 20, p.plinth - 30, 2 * OZ + 40, M.charred, s * (OX + 17), 30 + (p.plinth - 30) / 2, 0, 'plinthClad');
@@ -587,7 +697,7 @@ export function buildHiveTower(options = {}) {
     lifted.rotation.z = Math.atan2(dR - dL, 2 * (W / 2 + 15));
     nodes.frames.forEach((fg, i) => {
       fg.position.z = st[`f${i}z`] * MM;
-      fg.position.y = (H - 2 + st[`f${i}y`]) * MM;
+      fg.position.y = (d.boxH(d.k) - 2 + st[`f${i}y`]) * MM;
     });
     const on = st.strobe > 0.5 ? 1 : 1e-4;
     for (const m of nodes.strobes) m.scale.setScalar(on);
@@ -624,7 +734,7 @@ export function buildTimeline(p, d) {
 
   const tween = (dur, to) => {
     if (current !== null) {
-      if ('shuttle' in to) to[`f${current}z`] = to.shuttle - SLOT_ENGAGED;
+      if ('shuttle' in to) to[`f${current}z`] = to.shuttle - SLOT_ENGAGED - d.hiveZ;
       if ('scan' in to) to[`f${current}y`] = to.scan - d.engage;
     }
     const from = { ...state };
@@ -646,12 +756,12 @@ export function buildTimeline(p, d) {
 
   step('Idle', 'most of the week', 'Supervisor MCU logs temperature, humidity and weight. The Jetson is powered off.', () => hold(1.2));
   step('Pre-flight check', '~1 min', 'Outside ≥ 15 °C, no rain, wind < 8 m/s, 10:00–16:00, last visit > 7 days ago. On a cool day the cabinet is pre-warmed to 25 °C first. Red work light on.', () => hold(1.2));
-  step(`Forks to seam above box ${box}`, '~40 s', 'Both lift beams climb to 8 mm below the cleats of the box above the target box.', () => tween(2.2, { liftL: cleat - 8, liftR: cleat - 8 }));
+  step(`Forks to seam above box ${box}`, '~40 s', 'Both lift beams climb to 5 mm below the cleats of the box above the target box.', () => tween(2.2, { liftL: cleat - 5, liftR: cleat - 5 }));
   step('Forks swing in', '2 s', 'Servos turn the fork shafts 90° under the cleats.', () => tween(0.9, { forkL: 1, forkR: 1 }));
   step('Peel: left edge first', '~5 s', 'The left side rises 6 mm while the right side acts as a hinge. Propolis cracks along one edge at a fraction of the force.', () => tween(1.3, { liftL: cleat + 6 }));
   step('Peel: right edge', '~5 s', 'The right side follows. The load cells confirm the stack has come free before the full lift.', () => tween(1.3, { liftR: cleat + 6 }));
   step(`Lift upper stack ${p.gap} mm`, '~30 s', 'Lifts at 15 mm/s, starting slowly. Bees that fall drop straight back into the open box below.', () => tween(2.6, { liftL: up, liftR: up }));
-  step('Scan beams to the rim', '~20 s', 'The shuttles pass over the top bars. Inductive sensors find the steel pins and the working gap.', () => tween(2.0, { scan: approach, shuttle: state.f0z + SLOT_APPROACH }));
+  step('Scan beams to the rim', '~20 s', 'The shuttles pass over the top bars. Inductive sensors find the steel pins and the working gap.', () => tween(2.0, { scan: approach, shuttle: state.f0z + d.hiveZ + SLOT_APPROACH }));
 
   const pickFrame = (i, fast) => {
     const s = fast ? 0.55 : 1;
@@ -659,28 +769,29 @@ export function buildTimeline(p, d) {
     const target = z0 - d.gapWidth;
     tween(0.7 * s, { hook: 1 });
     tween(0.7 * s, { scan: d.engage });
-    tween(0.5 * s, { shuttle: z0 + SLOT_ENGAGED });
+    const hz = d.hiveZ;
+    tween(0.5 * s, { shuttle: z0 + hz + SLOT_ENGAGED });
     current = i;
-    tween(0.7 * s, { shuttle: z0 + SLOT_ENGAGED - 10 });
+    tween(0.7 * s, { shuttle: z0 + hz + SLOT_ENGAGED - 10 });
     tween(0.3 * s, { scan: d.engage + 3 });
-    tween(2.4 * s, { scan: d.engage + p.frameLift });
-    tween(0.9 * s, { shuttle: 0 + SLOT_ENGAGED }); // photo spot: frame centred between the cameras
+    tween(2.4 * s, { scan: d.engage + d.frameLift }); // comb centre level with the cameras
+    tween(0.9 * s, { shuttle: d.photoZ + SLOT_ENGAGED }); // photo spot: frame centred between the cameras
     for (let k = 0; k < 3; k++) { tween(0.12, { strobe: 1 }); tween(0.25, { strobe: 0 }); }
-    tween(0.9 * s, { shuttle: target + SLOT_ENGAGED });
+    tween(0.9 * s, { shuttle: target + hz + SLOT_ENGAGED });
     tween(2.2 * s, { scan: d.engage + 30 });
     tween(0.9 * s, { scan: d.engage });
     current = null;
-    tween(0.5 * s, { shuttle: target + SLOT_APPROACH });
+    tween(0.5 * s, { shuttle: target + hz + SLOT_APPROACH });
     tween(0.6 * s, { scan: approach });
     tween(0.5 * s, { hook: 0 });
   };
-  step('Frame 1: hook, nudge, lift', '~45 s', 'The hook swings in, its H-shaped plate slides around the pin neck and nudges the frame 10 mm into the gap to break burr comb. A 2 mm peel breaks the ear propolis, then the frame rises 300 mm, always vertical, and moves to the photo spot in the middle of the box. Four cameras shoot both faces straight on.', () => pickFrame(0, false));
+  step('Frame 1: hook, nudge, lift', '~45 s', 'The hook swings in, its H-shaped plate slides around the pin neck and nudges the frame 10 mm into the gap to break burr comb. A 2 mm peel breaks the ear propolis, then the frame rises until its comb centre is level with the cameras (about 300 mm for a deep frame, 245 mm for a super), always vertical, and moves to the photo spot. The two cameras shoot both faces straight on.', () => pickFrame(0, false));
   steps[steps.length - 1].captureNote = true;
-  step('Frames 2–3', '~45 s each', 'Each frame is lowered into the gap left by the previous one, like a beekeeper working through a box. The last 20 mm go down at 3 mm/s.', () => { tween(0.8, { shuttle: state.f1z + SLOT_APPROACH }); pickFrame(1, true); tween(0.8, { shuttle: state.f2z + SLOT_APPROACH }); pickFrame(2, true); });
+  step('Frames 2–3', '~45 s each', 'Each frame is lowered into the gap left by the previous one, like a beekeeper working through a box. The last 20 mm go down at 3 mm/s.', () => { tween(0.8, { shuttle: state.f1z + d.hiveZ + SLOT_APPROACH }); pickFrame(1, true); tween(0.8, { shuttle: state.f2z + d.hiveZ + SLOT_APPROACH }); pickFrame(2, true); });
   step('…remaining frames', '≈10 min / box', 'The preview skips frames 4–10. In simulation the box stays open about 10 minutes; the rest of the stack stays closed.', () => hold(1.0));
   step('Scan beams park', '~20 s', 'Hooks fold up and the shuttles go back to the middle.', () => tween(1.8, { hook: 0, scan: d.scanPark, shuttle: 0 }));
   step('Rim check', '~10 s', 'The stack stops 30 mm above the box. A camera checks the contact edges for bees; if any are found, the robot waits and retries.', () => tween(2.2, { liftL: cleat + 30, liftR: cleat + 30 }));
-  step('Rolling close', '~20 s', 'The left edge lands first at 2 mm/s, then the right. Contact moves across the rim so bees are pushed aside, not crushed.', () => { tween(1.4, { liftL: cleat - 8 }); tween(1.4, { liftR: cleat - 8 }); });
+  step('Rolling close', '~20 s', 'The left edge lands first at 2 mm/s, then the right. Contact moves across the rim so bees are pushed aside, not crushed.', () => { tween(1.4, { liftL: cleat - 5 }); tween(1.4, { liftR: cleat - 5 }); });
   step('Park & upload', '~1 min', 'Forks fold, beams park, red light off. Photos go to the Gratheon web app over Wi-Fi or LTE, and are stored locally too.', () => { tween(0.8, { forkL: 0, forkR: 0 }); tween(2.0, { liftL: d.liftPark, liftR: d.liftPark }); });
   // hidden reset so the loop is seamless (frames are inside the closed box)
   const reset = {};

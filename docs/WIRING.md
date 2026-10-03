@@ -9,7 +9,7 @@ Regenerate the diagram with `python3 docs/wiring_diagram.py`.
 | Rail | Source | Protection | Loads | Wire |
 |---|---|---|---|---|
 | 24 V bus | PSU ~350 W (or LiFePO4 via ideal diode) | main fuse 15 A | everything below | 2.5 mm² |
-| Logic (F1) | 24 V bus | 5 A | Octopus logic input, ESP32 (onboard buck), DC-DC 24→19 V (Orin Nano), DC-DC 24→5 V (Jetson Nano, USB hub) | 1.0 mm² |
+| Logic (F1) | 24 V bus | 5 A | Octopus logic input, ESP32 (onboard buck), DC-DC 24→19 V (Orin Nano), DC-DC 24→5 V (USB hub), PoE+ injector 24→48 V 30 W (Entrance Observer) | 1.0 mm² |
 | Motor rail (F2) | 24 V bus → E-stop (NC) → door reed (NC) → relay K1 | 10 A | 4 × DM542, Octopus motor input (TMC2209 shuttles), DC-DC 24→6 V 10 A (servos) | 1.5 mm² |
 | Heater (F3) | 24 V bus via Octopus HE0 MOSFET (PA2) | 5 A | 24 V PTC fan heater ≤100 W | 1.0 mm² |
 | LEDs, fans (F4) | 24 V bus via Octopus FAN0/1/2 MOSFETs | 3 A | strobe bars, 660 nm red strip, crown fan | 0.5 mm² |
@@ -49,7 +49,7 @@ K1 is held closed by the ESP32 watchdog only while the Jetson sends heartbeats. 
 |---|---|---|
 | Servo fork L / R | PB6 / PB7 | DS3218-class waterproof servo, power from the 6 V bus |
 | Servo hook L / R | PE12 / PE13 | as above |
-| Strobe | PA8 (FAN0) | 24 V white LED bars on the 4 cameras |
+| Strobe | PA8 (FAN0) | 24 V white LED rings on the 2 frame cameras |
 | Red work light | PE5 (FAN1) | 24 V 660 nm LED strip on both scan beams |
 | Crown fan | PD12 (FAN2) | 24 V 60 mm fan |
 | Cabinet heater | PA2 (HE0) | 24 V PTC fan heater |

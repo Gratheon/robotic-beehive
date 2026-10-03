@@ -12,23 +12,31 @@ Axis coordinates:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Tuple
+
+# Hive body types: (box height, frame height) in mm. Deep boxes hold the brood
+# nest, shallow supers ("magazines") hold honey. Mirrors DEFAULTS.boxTypes.
+BOX_TYPES: Dict[str, Tuple[float, float]] = {
+    "deep": (285.0, 279.0),
+    "super": (170.0, 164.0),
+}
 
 
 @dataclass(frozen=True)
 class HiveGeometry:
-    boxes: int = 3
-    box_h: float = 285.0
+    stack: Tuple[str, ...] = ("deep", "deep", "super")  # bottom to top
     box_inner_d: float = 400.0
     plinth: float = 200.0
     bottom_board: float = 150.0
     lid: float = 80.0
     cleat_underside: float = 25.0
     gap: float = 400.0  # how far the upper stack is raised
-    frame_lift: float = 300.0  # how far a frame is raised
+    # The frame cameras hang from the lift beams: while a box is open they sit
+    # cam_rim above its rim, and each frame is lifted until its comb centre is
+    # level with them (see frame_lift).
+    cam_rim: float = 160.0
     frame_count: int = 10
     frame_pitch: float = 37.5
-    frame_h: float = 279.0
     working_gap_start: float = 25.0  # empty space at the back wall
     frame_top_below_rim: float = 2.0
     pin_neck: float = 2.5
@@ -43,22 +51,45 @@ class HiveGeometry:
     # can be carried either way. Below this lift the pin is free to slide out.
     pocket_depth: float = 1.5
     # Frames are photographed centred between the front and back cameras.
-    photo_z: float = 0.0
+    photo_z: float = 29.0
+    # The hive sits this far toward the cabinet front (short bee tunnel through
+    # the front wall). All Z values here are cabinet coordinates.
+    hive_z: float = 45.0
     beam_clearance: float = 119.0  # min lift - scan (beam bodies + 5 mm margin)
     bee_clearance: float = 40.0  # frame top to lifted stack bottom
+    fork_approach: float = 5.0  # forks wait this far below a cleat before swinging in
     max_tilt: float = 35.0  # max left/right height difference of the lifted stack
-    pin_sensor_offset: float = -22.0  # inductive sensor Z relative to the hook slot
+    pin_sensor_offset: float = 22.0  # inductive sensor Z relative to the hook slot (in front of it)
 
     @property
     def base(self) -> float:
         return self.plinth + self.bottom_board
 
+    @property
+    def boxes(self) -> int:
+        return len(self.stack)
+
+    def box_height(self, i: int) -> float:
+        return BOX_TYPES[self.stack[i]][0]
+
+    def frame_height(self, i: int) -> float:
+        return BOX_TYPES[self.stack[i]][1]
+
     def box_bottom(self, i: int) -> float:
         """Bottom of box i (i == boxes is the lid)."""
-        return self.base + i * self.box_h
+        return self.base + sum(self.box_height(j) for j in range(i))
 
     def rim(self, k: int) -> float:
-        return self.box_bottom(k) + self.box_h
+        return self.box_bottom(k) + self.box_height(k)
+
+    def frame_lift(self, k: int) -> float:
+        """Lift that puts a box-k comb centre level with the cameras."""
+        return self.cam_rim + self.frame_top_below_rim + self.frame_height(k) / 2
+
+    @property
+    def cam_drop(self) -> float:
+        """Camera axis below the lift beam's fork line."""
+        return self.cleat_underside + self.gap - self.cam_rim
 
     def cleat(self, i: int) -> float:
         """Underside of the lifting cleat on box i (i == boxes is the lid)."""
@@ -69,7 +100,8 @@ class HiveGeometry:
         return self.rim(k) - self.frame_top_below_rim + self.pin_neck / 2
 
     def frame_z(self) -> List[float]:
-        z0 = -self.box_inner_d / 2 + self.working_gap_start + self.frame_pitch / 2
+        """Resting frame centres in cabinet Z."""
+        z0 = self.hive_z - self.box_inner_d / 2 + self.working_gap_start + self.frame_pitch / 2
         return [z0 + i * self.frame_pitch for i in range(self.frame_count)]
 
     @property
@@ -78,11 +110,14 @@ class HiveGeometry:
 
     @property
     def lift_park(self) -> float:
-        return self.base + 250
+        return self.base + 350
 
     @property
     def scan_park(self) -> float:
-        return self.plinth + 220
+        # Lowest scan height. The lift beams stay beam_clearance above it
+        # (>= 654 mm), so the cameras hanging cam_drop under them clear the
+        # Entrance Observer porch (top ~356 mm).
+        return self.base + 185
 
 
 @dataclass(frozen=True)
@@ -105,11 +140,13 @@ def default_axes(g: HiveGeometry) -> Dict[str, AxisConfig]:
         # TR16x4 is self-locking (lead angle ~4.5 deg), so nothing drops on power
         # loss, and its whip limit at 1.5 m (~1000 rpm) allows 40 mm/s.
         # Lift min/home keeps the lift beam above a parked scan beam.
-        axes[f"lift_{side}"] = AxisConfig(f"lift_{side}", g.base + 170, top, g.base + 170, 15.0, 40.0, 4.0, 1600)
-        # scan min keeps the hanging frame cameras above the plinth
-        axes[f"scan_{side}"] = AxisConfig(f"scan_{side}", g.plinth + 200, top - g.beam_clearance, g.plinth + 200, 40.0, 80.0, 4.0, 1600)
+        lift_min = g.scan_park + g.beam_clearance
+        axes[f"lift_{side}"] = AxisConfig(f"lift_{side}", lift_min, top, lift_min, 15.0, 40.0, 4.0, 1600)
+        # scan min = park: the hanging front cameras clear the Observer porch
+        axes[f"scan_{side}"] = AxisConfig(f"scan_{side}", g.scan_park, top - g.beam_clearance, g.scan_park, 40.0, 80.0, 4.0, 1600)
         # NEMA17 + GT2 20T belt
-        axes[f"shuttle_{side}"] = AxisConfig(f"shuttle_{side}", -235.0, 235.0, -235.0, 80.0, 400.0, 40.0, 3200)
+        # asymmetric: the hive sits 45 mm forward
+        axes[f"shuttle_{side}"] = AxisConfig(f"shuttle_{side}", -235.0, 255.0, -235.0, 80.0, 400.0, 40.0, 3200)
     return axes
 
 

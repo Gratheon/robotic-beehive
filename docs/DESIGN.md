@@ -3,7 +3,7 @@
 A static, weatherproof cabinet around a standard vertical hive. The robot inspects one box at a time:
 
 1. It raises everything above that box by 400 mm, cracking the propolis seal one edge at a time.
-2. It lifts each frame straight up, carries it to a photo spot in the middle of the box where four cameras shoot both faces straight on, then sets it down in the free gap next to it.
+2. It lifts each frame straight up, carries it to a photo spot in the middle of the box where two cameras, one per face, shoot both faces straight on, then sets it down in the free gap next to it.
 3. It closes the hive again so that contact rolls across the rim.
 
 Everything moving lives outside the bee space. The only changes to the hive itself are steel cleats on the boxes and two steel pins per frame.
@@ -38,24 +38,41 @@ Coordinates follow the model: X left/right, Y up, Z front (+, entrance) / back (
 
 | Part | Specification |
 |---|---|
-| Skeleton | 4 corner posts of 22 mm aluminium extrusion, plinth ring, crown ring. Footprint 810 × 666 mm, height ≈1.99 m for 3 boxes (+285 mm per extra box). |
+| Skeleton | 4 corner posts of 22 mm aluminium extrusion, plinth ring, crown ring. Footprint 810 × 666 mm, height ≈1.88 m for two deep boxes and a super (≈1.99 m for three deep boxes; each extra box adds its own height). |
 | Linear guides | MGN12 rail on the inner face of each post. Each post carries one lift-beam carriage and one scan-beam carriage. V-wheels on V-slot extrusion also work if the extrusion allows it. |
 | Lift beams (L, R) | NEMA23 + DM542 + TR16×4 lead screw hung from the crown (the screw works in tension). A servo-turned fork shaft carries two fingers that swing under the box cleats. Bar load cells sit in the fork bearing blocks. |
-| Scan beams (L, R) | Same drive as the lift beams. Each carries a belt-driven **shuttle** (NEMA17 + GT2) holding the frame hook and an inductive pin sensor, plus two frame cameras on arms (one in front of the box, one behind). |
-| Frame cameras | 4 × 12 MP (IMX477 class, ~6 mm lens), portrait, at z = ±265 mm: in the 40 mm between box and cladding, so they never pass over the hive. Each looks straight at the comb from 240 mm and covers one half of a face (x = ±90 mm). A ring strobe with crossed polarisers removes glare from nectar and capping. See *Seeing into the cells* below. |
+| Scan beams (L, R) | Same drive as the lift beams. Each carries a belt-driven **shuttle** (NEMA17 + GT2) holding the frame hook and an inductive pin sensor. The scan beams lift each frame until its comb centre is level with the cameras. |
+| Frame cameras | 2 × 12 MP (IMX477 class, 3.6 mm low-distortion M12 lens, about 83° × 67°), one per face, straight into the Orin Nano's two CSI ports. They hang from the **lift beams** (left beam: front camera, right beam: back camera), 265 mm in front of and behind the photo spot, between box and cladding, so they never pass over the hive. A ring strobe with crossed polarisers removes glare from nectar and capping. See *Cameras on the lift beams* and *Seeing into the cells* below. |
 | Hook | A servo swings an L-shaped hook over the box wall. Its H-shaped tip plate has two back-to-back slots, so it can push a frame toward the gap in either direction. It slides sideways around the pin neck and never presses down on the top bars. Once the frame hangs, the pin head drops into a 1.5 mm pocket, so a lifted frame can be carried either way without sliding out. |
+| Stack | Any mix of deep boxes (285 mm, 279 mm frames) for the brood nest and shallow supers (170 mm, 164 mm frames) for honey, set once per hive. The default is two deep boxes and one super. Cleats, pins and the 400 mm opening are the same for every box; the robot only needs each box's height. |
 | Box changes | Stainless 30×30 angle cleat on the left and right walls of every box and the lid, 25 mm above the box bottom. They double as hand grips. |
 | Frame changes | Two stainless M5 shoulder screws on each top bar ear (neck 2.5 mm, head 2.5 mm; they fit inside the bee space) and an ArUco tag on the end bar. |
 | Bottom board | 150 mm tall screened "varroa sump": white tray, fixed wide-angle camera, no moving parts. |
 
-**Seeing into the cells.** A cell is 5.4 mm wide and about 11 mm deep, and it slopes up 9–13°. Eggs lie at the bottom, so the camera must look nearly down the cell axis.
+**Cameras on the lift beams.** While a box is open the lift beams stand still at rim + 425 mm (cleat 25 mm + gap 400 mm), whatever the box. Cameras hung 265 mm below them therefore always sit 160 mm above the open rim, and the scan beam, now free of cameras, lifts each frame until its comb centre is level with them: 301.5 mm for a deep frame, 244 mm for a super frame. On the scan beam the cameras sat a fixed distance under the hook, which only centred one frame size.
 
-- *Before (v3.0).* Cameras hung beside the frame's ends and looked along the face. The far half of the comb was seen up to 77° off-axis, which shows cell walls, not contents.
-- *Now.* The cameras face the comb. The worst corner is about 35° off-axis and most of the comb is within 25°, so the camera sees to the bottom of the cell.
+The camera height has limits. For a deep frame it must be 150–165 mm above the rim, so the frame clears the rim and the scan beam stays 119 mm under the lift beam. So deep frames are centred with almost no room to move them up or down, while super frames have over 100 mm, enough to take two or three shots at different heights. A larger gap would give deep frames the same freedom, at the cost of a taller cabinet.
+
+**Seeing into the cells.** A cell is 5.4 mm wide and about 11 mm deep, and it slopes up 9–13°. Eggs lie at the bottom, so to see an egg the camera must look within about 26° of the cell axis. Every frame is carried to the same photo spot, so distance, focus and mm-per-pixel are identical for every frame, and counts and cell sizes are comparable over time.
+
+How many cameras is a cost/benefit question:
+
+| Option | Cost | What it sees | Verdict |
+|---|---|---|---|
+| 1 camera, frame turned around | +1 camera, but a rotary axis on the hook carrying a 4 kg frame | Both faces, perfectly centred | Rotating a heavy, bee-covered frame inside the gap is a new failure mode (swinging comb, collisions). Not worth one camera. |
+| **2 cameras, one per face (chosen)** | ≈€160, plug straight into the Orin Nano's two CSI ports | Whole face from 240 mm at about 9.5 px/mm (a cell ≈50 px, an egg ≈14 px). Centre of the comb within ~26°: eggs visible. Corners up to ~46°: larvae, capping, pollen and honey visible, eggs at the very bottom of a cell not. | Best balance. The brood nest, where eggs are, is usually the middle of the comb. |
+| 4 cameras, two per face | ≈€320 plus a USB hub or CSI multiplexer | Worst corner ~35°, most of the comb within 25° | More cameras, cables and calibration for the comb corners, where eggs are rare. Only if the bench test shows corner eggs matter. |
+
+Depth of field is not a reason for more cameras: comb is flat within about ±15 mm, and at 240 mm with the lens stopped to f/4–5.6 all of it is sharp.
+
+Infrared is an open research question. The detection models Gratheon runs today (bees, queen, cells, varroa) are trained on visible-light photos, and cheap NoIR camera variants exist if a test shows infrared helps with mites or with seeing through the bees. Until then the cameras stay visible-light, with the white strobe.
+
+**Bench test before buying hardware:** photograph a few real brood frames at 240 mm with one camera, centred and 45° off-axis, and count eggs found by eye and by the cell model. That decides between 2 and 4 cameras, and whether infrared is worth a second look.
+
+- *Before (v3.0).* Cameras hung beside the frame's ends and looked along the face; the far half of the comb was seen up to 77° off-axis.
 - *Low mount.* The cameras sit 10 mm below comb centre. Lower rows, whose cells slope away from the camera, are then seen more nearly along their axis.
-- *Same photo spot.* Every frame is photographed at the same place (centred between the cameras). Distance, focus and mm-per-pixel are identical for every frame, which makes cell counts and sizes comparable over time. At 12 MP a cell is about 60 px across and an egg about 18 px long.
-- *Cost.* Carrying the frame to the spot and back adds about 5 s per frame.
-- *Entrance.* Because the front cameras pass the entrance on their way down, the entrance is two 120 mm tunnels, one either side of the cameras' path.
+- *Entrance.* The entrance is the [Entrance Observer](https://github.com/Gratheon/entrance-observer) porch, which runs through the cabinet front to the 300 mm slot. The scan beams never go below 535 mm, so the front camera always passes above it.
+- *Short bee tunnel.* The hive stands 45 mm toward the cabinet front and the photo spot is 29 mm forward of the cabinet centre. The front camera still clears the hive by 10 mm, and the walk from the landing board to the hive entrance is about 70 mm instead of 115 mm.
 
 **Why TR16×4 lead screws everywhere.** Each screw hangs from a thrust bearing in the crown, so the load puts it in tension and it cannot buckle.
 
@@ -81,8 +98,8 @@ This is the sequence in `hivebot/sequences.py`. The simulator in `hivebot/motion
 7. **Each frame** (about 40 s):
    1. The hook lands 26 mm beside the pin at 8 mm/s. *(It may not land on a pin head.)*
    2. It slides onto the pin neck and pushes the frame 10 mm toward the gap.
-   3. It peels the ears 2 mm, one end at a time, then lifts 300 mm at 40 mm/s. *(The frame top must stay 40 mm below the bees hanging under the raised stack.)*
-   4. Carry the frame to the photo spot (middle of the box). Strobe and capture: 4 cameras, both faces straight on, each face in two halves.
+   3. It peels the ears 2 mm, one end at a time, then lifts the frame at 40 mm/s until its comb centre is level with the cameras: 301.5 mm for a deep frame, 244 mm for a super. *(The frame top must stay 40 mm below the bees hanging under the raised stack.)*
+   4. Carry the frame to the photo spot (middle of the box). Strobe and capture: 2 cameras, both faces straight on.
    5. The frame moves over the gap. It is lowered at 35 mm/s, and the last 20 mm at 3 mm/s. *(Checked.)*
    6. The hook slides off.
 8. The scan beams park. The stack lowers to 30 mm above the rim.
@@ -102,7 +119,7 @@ This is the sequence in `hivebot/sequences.py`. The simulator in `hivebot/motion
 - Only one box open at a time, with open time budgeted and measured.
 - Bees that drop fall back into their own box: frames and the stack are only ever directly above it.
 - The cabinet keeps robbing bees, wasps and hornets away from the open box.
-- The two entrance tunnels keep the flight path clear of every moving part. The robot's service side is the back.
+- The Entrance Observer porch keeps the flight path clear of every moving part. The service door is at the back, so the beekeeper never stands in the flight path.
 
 ## 5. Weather, materials, ecology
 
@@ -120,8 +137,8 @@ The Robotic Beehive follows the [hardware design principles](https://gratheon.co
 
 ## 6. Maintenance and human safety
 
-- **Service door** (full height, front). A reed interlock cuts motor power when it opens. Fold the forks and the hive can be worked by hand like any other hive, using the cleats as handles.
-- **E-stop** on the right side. It cuts only the 24 V motor rail; the computers keep logging.
+- **Service door** (full height, at the back, away from the entrance). A wide window at frame height lets visitors watch an inspection, and an e-paper status display shows the last inspection, weight, temperature and next visit; the light bar under it is the robot state (pulsing yellow idle, solid yellow inspecting, red needs attention). A reed interlock cuts motor power when it opens. Fold the forks and the hive can be worked by hand like any other hive, using the cleats as handles.
+- **E-stop** on a fixed stile at the back, next to the door handle, reachable without opening anything. It stays outside on purpose: opening the door already stops the motors through the interlock, so the button is for trouble while the door is closed. It cuts only the 24 V motor rail; the computers keep logging.
 - **Watchdog.** The ESP32 supervisor holds relay K1 closed only while the Jetson sends heartbeats, so a hung computer means no motor power.
 - **Nothing can drop.** The lead screws are self-locking, so power loss or an E-stop leaves the stack and frames where they are.
 - **Pinch points.** Forks and hooks are painted yellow. Contact detection on closing stops on anything firmer than bees.
@@ -135,7 +152,7 @@ The Robotic Beehive follows the [hardware design principles](https://gratheon.co
 | Jetson Orin Nano | Inspection brain: runs `hivebot`, Klipper host and Moonraker, the cameras, and the detection models (bees, queen, brood, varroa). Powered only for inspections. |
 | BTT Octopus + Klipper | Real-time step generation, homing, servos, heater and LED outputs. Python on Linux cannot time step pulses reliably, and the pulse jitter in `main.py` is that problem. |
 | ESP32 + LoRa (e.g. Heltec V3) | Always-on supervisor at ~0.2 W. Handles weight, temperature, humidity, LoRa telemetry, waking the Jetson and the watchdog. |
-| Jetson Nano (old) | Entrance Observer at the entrance tunnel: counts bees in and out, flags hornets and robbing. |
+| [Entrance Observer](https://github.com/Gratheon/entrance-observer) | Mounted on the cabinet front in its robot configuration. Its own pod (Raspberry Pi 5 + Hailo-8) counts bees in and out, flags hornets and robbing, and runs the entrance gate. Powered over PoE+ from a 24 V injector in the plinth. |
 
 **Energy per day:**
 
@@ -143,7 +160,7 @@ The Robotic Beehive follows the [hardware design principles](https://gratheon.co
 |---|---|
 | Supervisor | ≈5 Wh |
 | Weekly inspection (Jetson 15 W for 15 min, motors ≈50 W average for 12 min) | ≈15 Wh, plus up to 20 Wh of heater on cool days |
-| Entrance Observer running in daylight | 60–120 Wh, the largest consumer |
+| Entrance Observer (its own estimate) | ≈27 Wh sampled (2 min every 10 min), ≈111 Wh continuous in flight weather: the largest consumer |
 
 A 100 W panel gives roughly 300–400 Wh/day in an Estonian summer and far less in winter. So off-grid, the Entrance Observer runs in the season and sleeps in winter.
 
@@ -172,13 +189,12 @@ Parts you already have (Jetsons, 24 V PSU, extrusions, NEMA23s, DM542s) are coun
 |---|---|---|
 | Motion | MGN12 rails ×4 with carriages 120 · TR16×4 screws ×4 with brass nuts 90 · BK/BF12 bearing sets ×4 60 · couplings 20 · NEMA17 ×2 + GT2 belts and pulleys 40 · servos ×4 (waterproof metal gear) 60 · fork shafts, bearings, 2 load cells + HX711 35 · extra NEMA23/DM542 if short 0–130 · brackets, T-nuts, stainless fasteners 40 | 465–595 |
 | Hive kit | Stainless cleats for 4 boxes + lid 30 · frame pins (80) 20 · ArUco tags 5 | 55 |
-| Electronics | BTT Octopus 70 · NVMe 256 GB 30 · 12 MP cameras ×4 (IMX477 class, USB or CSI mux) 240 · polariser film 15 · varroa camera 25 · LED ring strobes + red strip 30 · ESP32 LoRa 25 · LTE modem 45 · antennas, bulkheads, surge arrestors 50 · DC-DC ×3 35 · E-stop, reed switch, relays, fuses, GX16, glands 60 · endstops + inductive sensors 20 · climate sensors 15 · cable chains and cable 40 · PTC heater 20 · sealed PSU box 20 | 780 |
+| Electronics | BTT Octopus 70 · NVMe 256 GB 30 · 12 MP cameras ×2 (IMX477 class + 3.6 mm M12 lens, direct CSI) 160 · polariser film 15 · varroa camera 25 · LED ring strobes + red strip 30 · ESP32 LoRa 25 · LTE modem 45 · antennas, bulkheads, surge arrestors 50 · DC-DC ×3 35 · E-stop, reed switch, relays, fuses, GX16, glands 60 · endstops + inductive sensors 20 · climate sensors 15 · cable chains and cable 40 · PTC heater 20 · sealed PSU box 20 | 700 |
 | Cabinet | Thermo-pine cladding ~6 m² 120 · wood-fibre board 40 · plywood backers, roof board 60 · charred skirt 25 · polycarbonate window 15 · hinges, lock, EPDM seals, insect mesh, hex vent panel 60 · levelling feet 20 · roof flashing 20 | 360 |
-| **Total** | | **≈1,660–1,790** |
+| **Total** | | **≈1,580–1,710** |
 | Solar option | 100 W panel 70 · 24 V MPPT 50 · LiFePO4 24 V 20 Ah 200 | 320 |
 
 Ways to cut cost:
-- One centred camera per face instead of two (−€120; the comb edges are then seen at up to ~40°, still far better than v3.0).
 - V-wheels instead of rails (−€90).
 - Painted plywood instead of thermo-pine (−€60).
 - Skip the heater and inspect only on warm days (−€20).
@@ -190,7 +206,7 @@ Ways to cut cost:
 3. **Pin fit.** A 6 mm slot on a 5 mm neck needs frames positioned to ±1 mm. The sensor search gives that, but swollen or warped frames need testing.
 4. **Bees festooning under the raised stack.** The 40 mm clearance above a lifted frame should be checked against real clusters.
 5. **Condensation** in the cabinet in autumn. Log humidity in the crown and near the rails.
-6. **Mice and wax moths** in the plinth and cabinet. Use mesh on every vent and a mouse guard at the entrance tunnel.
+6. **Mice and wax moths** in the plinth and cabinet. Use mesh on every vent and the Entrance Observer gate as a mouse guard.
 
 ## 11. More ideas for bees and beekeepers
 
@@ -200,5 +216,5 @@ Ways to cut cost:
 - **Motorised entrance reducer** (already in the model): closes against robbing or hornets, narrows in wind and winter, closes for transport.
 - **Varroa sump camera:** a daily mite-drop count with no drawer to pull. Combined with frame photos it gives a treatment trigger.
 - **Heating and ventilation hooks.** The cabinet heater and crown fan are already on the motion board, ready for the Hive heating and Ventilation control ideas.
-- **Visitor window with shutter** for school groups and corporate sponsorship programmes, closed by default so the hive stays dark.
+- **Visitor window with shutter** in the back door for school groups and corporate sponsorship programmes, closed by default so the hive stays dark.
 - **Feeder port** through the lid for a syrup line, filled from outside the cabinet.

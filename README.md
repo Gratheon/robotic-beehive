@@ -4,8 +4,10 @@
 #### Robotic Beehive (concept v3)
 A weatherproof cabinet around a standard vertical hive. To inspect a box, the robot:
 1. peels the stack above it apart one edge at a time and lifts it 400 mm;
-2. lifts each frame straight up, photographs both faces straight on at a fixed photo spot, then sets it down in the free gap beside it, like a beekeeper working through a box;
+2. lifts each frame straight up until its comb centre is level with two cameras (one per face), photographs both faces straight on, then sets it down in the free gap beside it, like a beekeeper working through a box;
 3. closes the hive with a rolling landing so bees are pushed aside, not crushed.
+
+The stack can mix deep brood boxes and shallow honey supers.
 
 [![Robotic Beehive 3D model: a frame lifted to the photo spot between the cameras](docs/preview.png)](https://gratheon.com/products/robotic_beehive/)
 
@@ -40,9 +42,9 @@ The simulator refuses anything a careful beekeeper would refuse, such as landing
 - BTT Octopus motion board running Klipper firmware
 - 4 × NEMA23 on TR16×4 lead screws with DM542 drivers (2 lift beams, 2 scan beams)
 - 2 × NEMA17 belt shuttles, 4 servos (forks, hooks)
-- 4 × 12 MP frame cameras facing the comb straight on, 2 rim cameras, varroa sump camera
+- 2 × 12 MP frame cameras (one per face, straight on), 2 rim cameras, varroa sump camera
 - ESP32 + LoRa always-on supervisor with load cells and climate sensors
-- Jetson Nano as the Entrance Observer
+- [Entrance Observer](https://github.com/Gratheon/entrance-observer) on the cabinet front (its own compute, PoE+ powered)
 - 24 V power supply, optional solar + LiFePO4
 - 22 mm aluminium extrusion skeleton
 

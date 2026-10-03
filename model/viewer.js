@@ -9,12 +9,12 @@ import { buildHiveTower, PARTS } from './hive-model.js';
 const SPECS = (d, p) => [
   ['Footprint', '810 × 666 mm'],
   ['Height', `${Math.round(d.crownTop + 110)} mm`],
-  ['Stack', `${d.n} × Estonian body (${p.box.w}×${p.box.d}×${p.box.h})`],
+  ['Stack', p.stack.map((t) => `${t} ${p.boxTypes[t].h}`).join(' · ') + ' mm'],
   ['Stack open gap', `${p.gap} mm`],
-  ['Frame lift', `${p.frameLift} mm, kept vertical`],
+  ['Frame lift', `${Math.round(d.frameLift)} mm: comb centre level with the cameras`],
   ['Motors', '4 × NEMA23 · 2 × NEMA17 · 4 servos'],
   ['Box open time', '≈ 10 min for 10 frames (simulated)'],
-  ['New parts', '≈ €1,660–1,790 (+€320 solar)'],
+  ['New parts', '≈ €1,580–1,710 (+€320 solar)'],
 ];
 
 export function mountHiveTower(root) {
@@ -106,13 +106,13 @@ export function mountHiveTower(root) {
   const ghostCache = new WeakMap();
   const stepsEl = $('steps');
 
-  function build(boxes, inspect) {
+  function build(stack, inspect) {
     const keep = tower ? time / tower.timeline.duration : 0;
     if (tower) {
       scene.remove(tower.root);
       tower.root.traverse((o) => o.geometry?.dispose());
     }
-    tower = buildHiveTower({ boxes, inspectBox: inspect });
+    tower = buildHiveTower({ stack, inspectBox: inspect });
     // Cladding shares materials with the robot; clone so ghosting only hits the cabinet.
     const clones = new Map();
     tower.nodes.cladding.traverse((o) => {
@@ -179,7 +179,7 @@ export function mountHiveTower(root) {
     for (let i = 0; i < n; i++) {
       const o = document.createElement('option');
       o.value = i;
-      o.textContent = i === 0 ? '1 (bottom)' : i === n - 1 ? `${i + 1} (top)` : String(i + 1);
+      o.textContent = `${i + 1} · ${tower.params.stack[i]}${i === 0 ? ' (bottom)' : i === n - 1 ? ' (top)' : ''}`;
       o.selected = i === tower.derived.k;
       sel.appendChild(o);
     }
@@ -189,10 +189,17 @@ export function mountHiveTower(root) {
     $('specs').innerHTML = SPECS(tower.derived, tower.params).map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   }
 
-  $('boxes').addEventListener('change', (e) => build(+e.target.value, Math.min(tower.derived.k, +e.target.value - 1)));
-  $('inspect').addEventListener('change', (e) => build(tower.derived.n, +e.target.value));
+  $('stack').addEventListener('change', (e) => {
+    const stack = e.target.value.split(',');
+    build(stack, Math.min(tower.derived.k, stack.length - 1));
+  });
+  $('inspect').addEventListener('change', (e) => build(tower.params.stack, +e.target.value));
   for (const b of $('clad').querySelectorAll('button')) b.addEventListener('click', () => setClad(b.dataset.value));
   $('xray').addEventListener('change', (e) => setXray(e.target.checked));
+  // Service door: swings 100° out about its hinge; eased in the render loop.
+  let doorOpen = 0;
+  const doorInput = $('door');
+  doorInput?.addEventListener('change', () => { if (doorInput.checked && cladMode === 'off') setClad('solid'); });
   for (const b of $('speed').querySelectorAll('button')) {
     b.addEventListener('click', () => {
       speed = +b.dataset.value;
@@ -239,7 +246,7 @@ export function mountHiveTower(root) {
   };
   new ResizeObserver(resize).observe(canvas.parentElement);
 
-  build(3, 1);
+  build(['deep', 'deep', 'super'], 1);
   if (['solid', 'ghost', 'off'].includes(hash.get('clad'))) setClad(hash.get('clad'));
   if (hash.has('t')) {
     time = Math.max(0, Number(hash.get('t')) || 0);
@@ -284,6 +291,9 @@ export function mountHiveTower(root) {
     });
     tower.nodes.status.material.emissiveIntensity = busy ? 1.8 : 0.6 + 0.5 * Math.sin(tt * 2);
 
+    const doorTarget = doorInput?.checked ? 1 : 0;
+    doorOpen += (doorTarget - doorOpen) * Math.min(1, dt * 3);
+    if (tower.nodes.door) tower.nodes.door.rotation.y = -doorOpen * (100 * Math.PI / 180);
     controls.update();
     // The dome travels with the camera, so zooming out never pushes its far
     // side past the camera's far plane (which clipped it to black).
