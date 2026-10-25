@@ -135,7 +135,7 @@ class Inspector:
         if top > c + sp.landing_zone:
             self.m.move(both(LIFT, c + sp.landing_zone), sp.travel)
         if check_rim:
-            for attempt in range(lim.rim_check_retries):
+            for _ in range(lim.rim_check_retries):
                 bees = self.rim.bees_on_rim()
                 if not bees:
                     break

@@ -104,7 +104,7 @@ def keyboard_listener():
 
 def stop_program():
     """Clean up and exit the program"""
-    global running
+    global running, motor_running
     running = False
     motor_running = False
     print("Cleaning up GPIO")

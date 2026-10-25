@@ -58,7 +58,7 @@ def test_every_frame_is_photographed_centred():
 
         def capture(self, meta):
             k, i = meta["box"], self.sim.hooked
-            self.shots.append((self.sim.frames[k][i], self.sim.camera_offset()))
+            self.shots.append((self.sim.frames[k][i], self.sim.camera_offset()))  # ty: ignore[invalid-argument-type]
             return []
 
     cfg = RobotConfig()

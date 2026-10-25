@@ -12,9 +12,8 @@ estimating how long the hive stays open.
 """
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, NoReturn, Optional, Tuple
 
 from ..config import RobotConfig
 from .base import ALL_AXES, MotionBackend, MotionError
@@ -53,7 +52,7 @@ class SimBackend(MotionBackend):
         self.log: List[tuple] = []
 
     # ----- helpers -------------------------------------------------------
-    def _fail(self, msg: str) -> None:
+    def _fail(self, msg: str) -> NoReturn:
         self.log.append(("refused", msg))
         raise MotionError(msg)
 
@@ -72,6 +71,7 @@ class SimBackend(MotionBackend):
     def camera_offset(self) -> float:
         """Hooked frame's comb centre minus the camera axis height (mm)."""
         k = self.open_box()
+        assert k is not None, "camera_offset needs an open box"
         g = self.g
         dy = (self.pos["scan_left"] + self.pos["scan_right"]) / 2 - g.engage(k)
         centre = g.rim(k) - g.frame_top_below_rim + dy - g.frame_height(k) / 2
@@ -122,10 +122,9 @@ class SimBackend(MotionBackend):
         raise KeyError(name)
 
     def read_load(self, side: str) -> float:
-        k = self.open_box()
-        if self.engaged[side] is None:
-            return 0.0
         e = self.engaged[side]
+        if e is None:
+            return 0.0
         weight = sum(self.hive.box_kg[i] for i in range(e, self.g.boxes)) + self.hive.lid_kg
         d = {s: self.lifted(s) for s in SIDES}
         if self.contact[side]:
@@ -158,7 +157,7 @@ class SimBackend(MotionBackend):
                 else:
                     self._fail(f"{name}: fork would swing into a cleat or into air at lift={lift:.1f}")
             else:
-                if self.lifted(side) > EPS or (self.engaged[side] is not None and self.pos[f"lift_{side}"] > g.cleat(self.engaged[side]) - 3):
+                if self.lifted(side) > EPS or ((e := self.engaged[side]) is not None and self.pos[f"lift_{side}"] > g.cleat(e) - 3):
                     self._fail(f"{name}: cannot stow fork while it carries the stack")
                 self.engaged[side] = None
                 self.peeled[side] = False
@@ -220,8 +219,9 @@ class SimBackend(MotionBackend):
         if self.hive.obstruction:
             side, h = self.hive.obstruction
             k = self.open_box()
-            if k is not None and self.engaged[side] is not None:
-                touch = g.cleat(self.engaged[side]) + (h - g.rim(k))
+            e = self.engaged[side]
+            if k is not None and e is not None:
+                touch = g.cleat(e) + (h - g.rim(k))
                 a = f"lift_{side}"
                 if start[a] >= touch > end[a]:
                     end[a] = touch
@@ -238,7 +238,7 @@ class SimBackend(MotionBackend):
         z1 = end["shuttle_left"]
         start_frame = start
         if k is not None and self._hook_on():
-            eng, appr = g.engage(k), g.engage(k) + g.hook_approach
+            eng = g.engage(k)
             if scan1 < eng - 0.5:
                 self._fail("hook below the pin neck: it would press on the top bars")
             head = eng + 5.0  # plate below this would hit a pin head
@@ -279,6 +279,7 @@ class SimBackend(MotionBackend):
     def _check_frame(self, k: int, start: dict, end: dict, speed: float) -> None:
         g, sp = self.g, self.cfg.speeds
         i = self.hooked
+        assert i is not None, "_check_frame needs a hooked frame"
         eng = g.engage(k)
         dy0 = (start["scan_left"] + start["scan_right"]) / 2 - eng
         dy1 = (end["scan_left"] + end["scan_right"]) / 2 - eng
