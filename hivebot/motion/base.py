@@ -64,5 +64,5 @@ class MotionBackend(ABC):
     def emergency_stop(self) -> None:
         """Cut motion immediately."""
 
-    def disable_motors(self) -> None:  # optional: self-locking screws hold position
+    def disable_motors(self) -> None:  # noqa: B027  optional: self-locking screws hold position
         pass

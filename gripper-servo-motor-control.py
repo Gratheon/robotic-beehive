@@ -17,7 +17,7 @@ try:
         servo.angle = 90
         time.sleep(2)
         
-chrome+        servo.angle = 0
+        servo.angle = 0
         time.sleep(2)
         #pwm.ChangeDutyCycle(2.5)
         #time.sleep(1)
